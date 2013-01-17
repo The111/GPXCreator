@@ -27,7 +27,7 @@ public class GPXPanel extends JMapViewer {
         mapController.setMovementEnabled(true);
         mapController.setWheelZoomEnabled(true);
         mapController.setMovementMouseButton(MouseEvent.BUTTON1);
-        this.setScrollWrapEnabled(true);
+        this.setScrollWrapEnabled(false); // TODO fix paint methods to be faster when scrollwrap is enabled
         this.setZoomButtonStyle(ZOOM_BUTTON_STYLE.VERTICAL);
         routes = new ArrayList<Route>();
     }
@@ -51,7 +51,7 @@ public class GPXPanel extends JMapViewer {
         paintRoutes(g, routes);
     }
     
-    private void paintRoutes(Graphics g, List<Route> routes) {
+    private void paintRoutes(Graphics g, List<Route> routes) { // TODO stop painting off-screen routes!
         List<RoutePoint> routePoints;
         RoutePoint curr;
         RoutePoint prev;
