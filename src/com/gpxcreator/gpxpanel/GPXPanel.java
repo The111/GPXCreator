@@ -1,10 +1,10 @@
 package com.gpxcreator.gpxpanel;
 
 import java.awt.BasicStroke;
-import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,6 +56,7 @@ public class GPXPanel extends JMapViewer {
         RoutePoint curr;
         RoutePoint prev;
         for (Route route : routes) {
+            g.setColor(route.getColor());
             if ((route.getLength()) >= 2) {
                 routePoints = route.getRoutePoints();
                 paintRoutePoint(g, curr = route.getStart());
@@ -73,7 +74,6 @@ public class GPXPanel extends JMapViewer {
         Point p = getMapPosition(curr.getLat(), curr.getLon(), false);
         int r = 3;
         int d = 2 * r;
-        g.setColor(Color.RED);
         g.fillOval(p.x - r, p.y - r, d, d);
         if (scrollWrapEnabled) {
             Point pSave = p;
@@ -103,6 +103,7 @@ public class GPXPanel extends JMapViewer {
         Point p1 = getMapPosition(curr.getLat(), curr.getLon(), false);
         Point p2 = getMapPosition(prev.getLat(), prev.getLon(), false);
         Graphics2D g2d = (Graphics2D) g;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setStroke(new BasicStroke(2));
         g.drawLine(p1.x, p1.y, p2.x, p2.y);
         if (scrollWrapEnabled) {

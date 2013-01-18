@@ -1,5 +1,6 @@
 package com.gpxcreator.gpxpanel;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -19,6 +20,14 @@ public class Route {
     private String name;
     private static int unnamedCounter = 0;
     private List<RoutePoint> routePoints;
+    private Color color;
+    private static Color[] colors = { // some standard random colors
+        new Color(255,  0,  0), new Color(  0,255,  0), new Color(  0,  0,255),
+        new Color(255,255,  0), new Color(255,  0,255), new Color(  0,255,255),
+        new Color(127,  0,255), new Color(255,127,  0), new Color(255,255,255)
+    };
+    private static int currentColor = 0;
+    private boolean visible;
     
     /**
      * Creates an empty {@link #Route}.
@@ -27,8 +36,10 @@ public class Route {
      *            The name of the route. 
      */
     public Route(String routeName) {
+        this.visible = true;
         this.name = routeName;
         this.routePoints = new ArrayList<RoutePoint>();
+        this.color = colors[(currentColor++) % colors.length];
     }
     
     /**
@@ -39,9 +50,10 @@ public class Route {
      */
     public Route(File gpx) {
         boolean lookForName = false;
-        
+        this.visible = true;
         this.name = "";
         this.routePoints = new ArrayList<RoutePoint>();
+        this.color = colors[(currentColor++) % colors.length];
         double lat, lon;
         FileInputStream fis = null;
         try {
@@ -117,6 +129,22 @@ public class Route {
         this.name = name;
     }
     
+    public Color getColor() {
+        return color;
+    }
+
+    public void setColor(Color color) {
+        this.color = color;
+    }
+
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+    }
+
     public List<RoutePoint> getRoutePoints() {
         return routePoints;
     }

@@ -42,27 +42,30 @@ import org.openstreetmap.gui.jmapviewer.OsmFileCacheTileLoader;
 
 import com.gpxcreator.gpxpanel.GPXPanel;
 import com.gpxcreator.gpxpanel.Route;
+import com.gpxcreator.tablecellrenderers.RouteColorCellRenderer;
+import com.gpxcreator.tablecellrenderers.RouteVisibleCellRenderer;
 
-public class GPXCreator {
+@SuppressWarnings("serial")
+public class GPXCreator extends JComponent {
     
+    // temporary ghetto indent style to show layout hierarchy
     private JFrame frame;
-        private JToolBar toolBarMain;           // NORTH
+        private JToolBar toolBarMain;       // NORTH
             private JButton btnFileSave;
             private JFileChooser chooserFileSave;
             private File fileSave;
             private JButton btnFileOpen;
             private JFileChooser chooserFileOpen;
             private File fileOpened;
-        private JSplitPane splitPaneMain;       // CENTER
+        private JSplitPane splitPaneMain;   // CENTER
             private JSplitPane splitPaneSidebar;    // LEFT
                 private JPanel containerLeftSidebarTop;        // TOP
                     private JPanel containerRoutesHeading;
                         private JLabel labelRoutesHeading;
                         private JLabel labelRoutesSubheading;
-                    private JPanel containerRoutes; // necessary???
-                        private JScrollPane scrollPaneRoutes;
-                            private DefaultTableModel routeTableModel;
-                            private JTable tableRoutes;
+                    private JScrollPane scrollPaneRoutes;
+                        private DefaultTableModel routeTableModel;
+                        private JTable tableRoutes;
                 private JPanel containerLeftSidebarBottom;    // BOTTOM
             private GPXPanel mapPanel;              // RIGHT
 
@@ -97,7 +100,6 @@ public class GPXCreator {
     /**
      * Initialize the contents of the frame.
      */
-    @SuppressWarnings("serial")
     private void initialize() {
 
         /* ---------------------------------------------- MAIN FRAME ----------------------------------------------- */
@@ -126,23 +128,14 @@ public class GPXCreator {
         }
         splitPaneMain.setRightComponent(mapPanel);
         
-        /* ---------------------------------------- LEFT SIDEBAR CONTAINER ----------------------------------------- */
-        
-        /*containerLeftSidebar = new JPanel();
-        containerLeftSidebar.setLayout(new BoxLayout(containerLeftSidebar, BoxLayout.Y_AXIS));
-        splitPaneMain.setLeftComponent(containerLeftSidebar);*/
-        
         /* ------------------------------------------ SIDEBAR SPLIT PANE ------------------------------------------- */
         splitPaneSidebar = new JSplitPane();
         splitPaneSidebar.setContinuousLayout(true);
         splitPaneSidebar.setOrientation(JSplitPane.VERTICAL_SPLIT);
-        //containerLeftSidebar.add(splitPaneSidebar);
         splitPaneMain.setLeftComponent(splitPaneSidebar);
         
         /* -------------------------------------- LEFT SIDEBAR TOP CONTAINER --------------------------------------- */
         containerLeftSidebarTop = new JPanel();
-        containerLeftSidebarTop.setMinimumSize(new Dimension(10, 100));
-        containerLeftSidebarTop.setMaximumSize(new Dimension(32767, 200));
         containerLeftSidebarTop.setPreferredSize(new Dimension(10, 100));
         containerLeftSidebarTop.setAlignmentY(Component.TOP_ALIGNMENT);
         containerLeftSidebarTop.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -156,7 +149,6 @@ public class GPXCreator {
         containerRoutesHeading.setMaximumSize(new Dimension(32767, 35));
         containerRoutesHeading.setAlignmentY(Component.TOP_ALIGNMENT);
         containerRoutesHeading.setAlignmentX(Component.LEFT_ALIGNMENT);
-        containerRoutesHeading.setBackground(Color.GREEN);
         containerRoutesHeading.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
         containerRoutesHeading.setLayout(new BoxLayout(containerRoutesHeading, BoxLayout.Y_AXIS));
         containerRoutesHeading.setBorder(new CompoundBorder(new MatteBorder(0, 1, 0, 1, (Color) new Color(0, 0, 0)), new EmptyBorder(2, 5, 5, 5)));
@@ -171,6 +163,7 @@ public class GPXCreator {
         labelRoutesHeading.setFont(new Font("Segoe UI", Font.BOLD, 12));
         containerRoutesHeading.add(labelRoutesHeading);
         labelRoutesSubheading = new JLabel("(active route shown in bold)");
+        labelRoutesSubheading.setBackground(Color.BLUE);
         labelRoutesSubheading.setMinimumSize(new Dimension(100, 14));
         labelRoutesSubheading.setPreferredSize(new Dimension(100, 14));
         labelRoutesSubheading.setAlignmentY(Component.TOP_ALIGNMENT);
@@ -180,30 +173,30 @@ public class GPXCreator {
         labelRoutesSubheading.setFont(new Font("Segoe UI", Font.PLAIN, 9));
         containerRoutesHeading.add(labelRoutesSubheading);
         
-        /* ----------------------------------------- ROUTE TABLE CONTAINER ----------------------------------------- */
-        containerRoutes = new JPanel();
-        containerRoutes.setAlignmentY(Component.TOP_ALIGNMENT);
-        containerRoutes.setAlignmentX(Component.LEFT_ALIGNMENT);
-        containerRoutes.setLayout(new BoxLayout(containerRoutes, BoxLayout.Y_AXIS));
-        containerRoutes.setBorder(new EmptyBorder(0, 0, 0, 0));
-        containerLeftSidebarTop.add(containerRoutes);
-        
-
-        
         /* ------------------------------------------- ROUTE TABLE/MODEL ------------------------------------------- */
-        routeTableModel = new DefaultTableModel(new Object[]{"Route Names"},0);
+        routeTableModel = new DefaultTableModel(new Object[]{"Visible", "Name", "Color"},0);
         tableRoutes = new JTable(routeTableModel);
-        tableRoutes.setPreferredScrollableViewportSize(new Dimension(100, 50));
-        tableRoutes.setMaximumSize(new Dimension(32767, 32767));
-        tableRoutes.setPreferredSize(new Dimension(100, 50));
-        tableRoutes.setMinimumSize(new Dimension(100, 25));
         tableRoutes.setAlignmentY(Component.TOP_ALIGNMENT);
         tableRoutes.setAlignmentX(Component.LEFT_ALIGNMENT);
         tableRoutes.setBorder(new EmptyBorder(0, 0, 0, 0));
         tableRoutes.setFillsViewportHeight(true);
+        
+        tableRoutes.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        
+        tableRoutes.setShowVerticalLines(false);
         tableRoutes.setTableHeader(null);
         tableRoutes.setEnabled(false); // TODO <-- this is only temporary... until table can be developed further!
-        //scrollPaneRoutes.add(tableRoutes);
+        
+        tableRoutes.getColumn("Visible").setCellRenderer(new RouteVisibleCellRenderer());
+        tableRoutes.getColumn("Color").setCellRenderer(new RouteColorCellRenderer());
+
+        tableRoutes.getColumn("Visible").setPreferredWidth(14);
+        tableRoutes.getColumn("Visible").setMinWidth(14);
+        tableRoutes.getColumn("Visible").setMaxWidth(14);
+        tableRoutes.getColumn("Color").setPreferredWidth(14);
+        tableRoutes.getColumn("Color").setMinWidth(14);
+        tableRoutes.getColumn("Color").setMaxWidth(14);
+        
         
         
         
@@ -212,21 +205,16 @@ public class GPXCreator {
         scrollPaneRoutes.setAlignmentY(Component.TOP_ALIGNMENT);
         scrollPaneRoutes.setAlignmentX(Component.LEFT_ALIGNMENT);
         scrollPaneRoutes.setBorder(new LineBorder(new Color(0, 0, 0)));
-        containerRoutes.add(scrollPaneRoutes);
-        
-        
+        containerLeftSidebarTop.add(scrollPaneRoutes);
         
         /* ------------------------------------ LEFT SIDEBAR BOTTOM CONTAINER -------------------------------------- */
         containerLeftSidebarBottom = new JPanel();
-        containerLeftSidebarBottom.setMinimumSize(new Dimension(150, 20));
-        containerLeftSidebarBottom.setPreferredSize(new Dimension(150, 300));
+        containerLeftSidebarBottom.setMinimumSize(new Dimension(150, 10));
+        containerLeftSidebarBottom.setPreferredSize(new Dimension(150, 10));
         containerLeftSidebarBottom.setAlignmentY(Component.TOP_ALIGNMENT);
         containerLeftSidebarBottom.setAlignmentX(Component.LEFT_ALIGNMENT);
         containerLeftSidebarBottom.setLayout(new BoxLayout(containerLeftSidebarBottom, BoxLayout.Y_AXIS));
         splitPaneSidebar.setBottomComponent(containerLeftSidebarBottom);
-        
-        
-        
         
         /* --------------------------------------------- MAIN TOOLBAR ---------------------------------------------- */
         toolBarMain = new JToolBar();
@@ -288,50 +276,28 @@ public class GPXCreator {
         
         
         
-        
-        
-        
-
-        
-
-        
-
-        
 
         
         
+        //resizeRouteTableWidth();
 
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        /*splitPaneSidebar.addPropertyChangeListener(new PropertyChangeListener() {
+            @Override
+            public void propertyChange (PropertyChangeEvent changeEvent) {
+                JSplitPane sourceSplitPane = (JSplitPane)changeEvent.getSource();
+                String propertyName = changeEvent.getPropertyName();
+                if (propertyName.equals(JSplitPane.LAST_DIVIDER_LOCATION_PROPERTY)) {
+                    int current = sourceSplitPane.getDividerLocation();
+                    System.out.println ("Current: " + current);
+                    Integer last = (Integer)changeEvent.getNewValue();
+                    System.out.println ("Last: " + last);
+                    Integer priorLast = (Integer)changeEvent.getOldValue();
+                    System.out.println ("Prior last: " + priorLast);
+                }
+                //resizeRouteTableWidth();
+            }
+        });*/
 
-        
-
-
-        
-
-
-
-        
-        
-        
-        
-
-
-
-        
-
-        
         
         
         // bogus event generator for quick testing of event handling
@@ -344,9 +310,9 @@ public class GPXCreator {
             }
         });*/
         
-        java.util.Properties systemProperties = System.getProperties();
+        /*java.util.Properties systemProperties = System.getProperties();
         systemProperties.setProperty("http.proxyHost", "proxy1.lmco.com");
-        systemProperties.setProperty("http.proxyPort", "80");
+        systemProperties.setProperty("http.proxyPort", "80");*/
     }
     
     public void fileOpen() {
@@ -355,7 +321,7 @@ public class GPXCreator {
             fileOpened = chooserFileOpen.getSelectedFile();
             Route route = new Route(fileOpened);
             mapPanel.addRoute(route);
-            routeTableModel.addRow(new Object[]{route.getName()});
+            routeTableModel.addRow(new Object[]{route.isVisible(), route.getName(), route.getColor()});
             mapPanel.fitRouteToPanel(route);
         }
     }
@@ -367,4 +333,16 @@ public class GPXCreator {
             mapPanel.getActiveRoute().saveToGPXFile(fileSave);
         }
     }
+    
+    /*public void resizeRouteTableWidth() {
+        int width = 0;
+        for (int row = 0; row < tableRoutes.getRowCount(); row++) {
+            TableCellRenderer renderer = tableRoutes.getCellRenderer(row, 0);
+            Component comp = tableRoutes.prepareRenderer(renderer, row, 0);
+            width = Math.max (comp.getPreferredSize().width, width);
+        }
+        width = Math.max(width, scrollPaneRoutes.getWidth());
+        width -= 10;
+        System.out.println(width);
+    }*/
 }
