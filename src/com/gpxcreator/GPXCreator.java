@@ -7,12 +7,14 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
+import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
+import java.text.SimpleDateFormat;
 
 import javax.swing.AbstractAction;
 import javax.swing.BoxLayout;
@@ -64,10 +66,17 @@ public class GPXCreator extends JComponent {
                         private JLabel labelRoutesHeading;
                         private JLabel labelRoutesSubheading;
                     private JScrollPane scrollPaneRoutes;
-                        private DefaultTableModel routeTableModel;
+                        private DefaultTableModel tableModelRoutes;
                         private JTable tableRoutes;
                 private JPanel containerLeftSidebarBottom;    // BOTTOM
+                    private JPanel containerRouteProps;
+                        private JLabel labelRoutePropsHeading;
+                    private JScrollPane scrollPaneRouteProps;
+                        private DefaultTableModel tableModelRouteProps;
+                        private JTable tableRouteProps;
             private GPXPanel mapPanel;              // RIGHT
+            
+    private Route activeRoute;
 
     /**
      * Launch the application.
@@ -130,6 +139,8 @@ public class GPXCreator extends JComponent {
         
         /* ------------------------------------------ SIDEBAR SPLIT PANE ------------------------------------------- */
         splitPaneSidebar = new JSplitPane();
+        splitPaneSidebar.setMinimumSize(new Dimension(280, 25));
+        splitPaneSidebar.setPreferredSize(new Dimension(280, 25));
         splitPaneSidebar.setContinuousLayout(true);
         splitPaneSidebar.setOrientation(JSplitPane.VERTICAL_SPLIT);
         splitPaneMain.setLeftComponent(splitPaneSidebar);
@@ -174,15 +185,14 @@ public class GPXCreator extends JComponent {
         containerRoutesHeading.add(labelRoutesSubheading);
         
         /* ------------------------------------------- ROUTE TABLE/MODEL ------------------------------------------- */
-        routeTableModel = new DefaultTableModel(new Object[]{"Visible", "Name", "Color"},0);
-        tableRoutes = new JTable(routeTableModel);
+        tableModelRoutes = new DefaultTableModel(new Object[]{"Visible", "Name", "Color"},0);
+        tableRoutes = new JTable(tableModelRoutes);
         tableRoutes.setAlignmentY(Component.TOP_ALIGNMENT);
         tableRoutes.setAlignmentX(Component.LEFT_ALIGNMENT);
         tableRoutes.setBorder(new EmptyBorder(0, 0, 0, 0));
         tableRoutes.setFillsViewportHeight(true);
         
-        tableRoutes.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-        
+        // tableRoutes.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         tableRoutes.setShowVerticalLines(false);
         tableRoutes.setTableHeader(null);
         tableRoutes.setEnabled(false); // TODO <-- this is only temporary... until table can be developed further!
@@ -197,9 +207,6 @@ public class GPXCreator extends JComponent {
         tableRoutes.getColumn("Color").setMinWidth(14);
         tableRoutes.getColumn("Color").setMaxWidth(14);
         
-        
-        
-        
         /* ----------------------------------------- ROUTE TABLE SCROLLPANE ---------------------------------------- */
         scrollPaneRoutes = new JScrollPane(tableRoutes);
         scrollPaneRoutes.setAlignmentY(Component.TOP_ALIGNMENT);
@@ -209,12 +216,57 @@ public class GPXCreator extends JComponent {
         
         /* ------------------------------------ LEFT SIDEBAR BOTTOM CONTAINER -------------------------------------- */
         containerLeftSidebarBottom = new JPanel();
-        containerLeftSidebarBottom.setMinimumSize(new Dimension(150, 10));
-        containerLeftSidebarBottom.setPreferredSize(new Dimension(150, 10));
         containerLeftSidebarBottom.setAlignmentY(Component.TOP_ALIGNMENT);
         containerLeftSidebarBottom.setAlignmentX(Component.LEFT_ALIGNMENT);
         containerLeftSidebarBottom.setLayout(new BoxLayout(containerLeftSidebarBottom, BoxLayout.Y_AXIS));
         splitPaneSidebar.setBottomComponent(containerLeftSidebarBottom);
+        
+        /* -------------------------------------- ROUTE PROPERTIES CONTAINER --------------------------------------- */
+        containerRouteProps = new JPanel();
+        containerRouteProps.setMaximumSize(new Dimension(32767, 35));
+        containerRouteProps.setMinimumSize(new Dimension(10, 35));
+        containerRouteProps.setPreferredSize(new Dimension(10, 35));
+        containerRouteProps.setAlignmentY(Component.TOP_ALIGNMENT);
+        containerRouteProps.setAlignmentX(Component.LEFT_ALIGNMENT);
+        containerRouteProps.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+        containerRouteProps.setLayout(new BoxLayout(containerRouteProps, BoxLayout.Y_AXIS));
+        containerRouteProps.setBorder(new CompoundBorder(new MatteBorder(0, 1, 0, 1, (Color) new Color(0, 0, 0)), new EmptyBorder(2, 5, 5, 5)));
+        containerLeftSidebarBottom.add(containerRouteProps);
+        
+        /* --------------------------------------- ROUTE PROPERTIES HEADING ---------------------------------------- */
+        labelRoutePropsHeading = new JLabel("Route Properties");
+        labelRoutePropsHeading.setMaximumSize(new Dimension(32767, 14));
+        labelRoutePropsHeading.setHorizontalTextPosition(SwingConstants.LEFT);
+        labelRoutePropsHeading.setHorizontalAlignment(SwingConstants.LEFT);
+        labelRoutePropsHeading.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        labelRoutePropsHeading.setAlignmentY(0.0f);
+        containerRouteProps.add(labelRoutePropsHeading);
+        
+        /* ------------------------------------- ROUTE PROPERTIES TABLE/MODEL -------------------------------------- */
+        tableModelRouteProps = new DefaultTableModel(new Object[]{"Name", "Value"},0);
+        tableRouteProps = new JTable(tableModelRouteProps);
+        tableRouteProps.setAlignmentY(Component.TOP_ALIGNMENT);
+        tableRouteProps.setAlignmentX(Component.LEFT_ALIGNMENT);
+        tableRouteProps.setBorder(new EmptyBorder(0, 0, 0, 0));
+        tableRouteProps.setFillsViewportHeight(true);
+        
+        //tableRouteProps.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        //tableRouteProps.setShowVerticalLines(false);
+        tableRouteProps.setTableHeader(null);
+        tableRouteProps.setEnabled(false); // TODO <-- this is only temporary... until table can be developed further!
+        
+        tableRouteProps.getColumn("Name").setPreferredWidth(100);
+        tableRouteProps.getColumn("Name").setMinWidth(100);
+        tableRouteProps.getColumn("Value").setPreferredWidth(180);
+        tableRouteProps.getColumn("Value").setMinWidth(180);
+        
+        /* -------------------------------------- ROUTE PROPERTIES SCROLLPANE -------------------------------------- */
+        scrollPaneRouteProps = new JScrollPane(tableRouteProps);
+        scrollPaneRouteProps.setAlignmentY(Component.TOP_ALIGNMENT);
+        scrollPaneRouteProps.setAlignmentX(Component.LEFT_ALIGNMENT);
+        scrollPaneRouteProps.setBorder(new LineBorder(new Color(0, 0, 0)));
+        containerLeftSidebarBottom.add(scrollPaneRouteProps);
+        splitPaneSidebar.setDividerLocation(160);
         
         /* --------------------------------------------- MAIN TOOLBAR ---------------------------------------------- */
         toolBarMain = new JToolBar();
@@ -279,6 +331,41 @@ public class GPXCreator extends JComponent {
 
         
         
+        
+        /*tableRoutes.getModel().addTableModelListener(new TableModelListener() {
+            public void tableChanged(TableModelEvent e) {
+                if (e.getType() == TableModelEvent.INSERT) {
+                    //resizeRouteTableWidth();
+                    
+                    JScrollBar scrollBar = scrollPaneRoutes.getVerticalScrollBar();
+                    scrollBar.setValue(scrollBar.getMaximum());
+                    
+                    /*int last = tableRoutes.getModel().getRowCount() - 1;
+                    Rectangle r = tableRoutes.getCellRect(last, 0, true);
+                    tableRoutes.scrollRectToVisible(r);
+                }
+            }
+        });*/
+        
+        /*scrollPaneRoutes.getViewport().addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                if (routesVerticalScrollVisible) {
+                    if (!scrollPaneRoutes.getVerticalScrollBar().isVisible()) {
+                        resizeRouteTableWidth();
+                        System.err.println("Scrollbar removed");
+                    }
+                } else if (!routesVerticalScrollVisible) {
+                    if (scrollPaneRoutes.getVerticalScrollBar().isVisible()) {
+                        resizeRouteTableWidth();
+                        System.err.println("Scrollbar added");
+                    }
+                }
+                routesVerticalScrollVisible = scrollPaneRoutes.getVerticalScrollBar().isVisible();
+            }
+        });*/
+        
+        
         //resizeRouteTableWidth();
 
         /*splitPaneSidebar.addPropertyChangeListener(new PropertyChangeListener() {
@@ -298,8 +385,6 @@ public class GPXCreator extends JComponent {
             }
         });*/
 
-        
-        
         // bogus event generator for quick testing of event handling
         /*mapPanel.addMouseListener(new MouseAdapter() {
             @Override
@@ -313,7 +398,31 @@ public class GPXCreator extends JComponent {
         /*java.util.Properties systemProperties = System.getProperties();
         systemProperties.setProperty("http.proxyHost", "proxy1.lmco.com");
         systemProperties.setProperty("http.proxyPort", "80");*/
+        
     }
+    
+    /*public void resizeRouteTableWidth() {
+        int width = 0;
+        for (int row = 0; row < tableRoutes.getRowCount(); row++) {
+            TableCellRenderer renderer = tableRoutes.getCellRenderer(row, 1);
+            Component comp = tableRoutes.prepareRenderer(renderer, row, 1);
+            width = Math.max (comp.getPreferredSize().width, width);
+        }
+        Dimension dim = scrollPaneRoutes.getMinimumSize();
+        int increment;
+        
+        if (scrollPaneRoutes.getVerticalScrollBar().isVisible()) {
+            increment = 50;
+        } else {
+            increment = 35;
+        }
+        
+        if (width + 14 + 14 > dim.width) {
+            dim.setSize(width + increment, dim.height);
+            containerLeftSidebarTop.setPreferredSize(dim);
+            splitPaneMain.resetToPreferredSizes();
+        }
+    }*/
     
     public void fileOpen() {
         int returnVal = chooserFileOpen.showOpenDialog(mapPanel);
@@ -321,8 +430,11 @@ public class GPXCreator extends JComponent {
             fileOpened = chooserFileOpen.getSelectedFile();
             Route route = new Route(fileOpened);
             mapPanel.addRoute(route);
-            routeTableModel.addRow(new Object[]{route.isVisible(), route.getName(), route.getColor()});
-            mapPanel.fitRouteToPanel(route);
+            tableModelRoutes.addRow(new Object[]{route.isVisible(), route.getName(), route.getColor()});
+            int last = tableRoutes.getModel().getRowCount() - 1;
+            Rectangle r = tableRoutes.getCellRect(last, 0, true);
+            tableRoutes.scrollRectToVisible(r);
+            setActiveRoute(route);
         }
     }
     
@@ -330,19 +442,64 @@ public class GPXCreator extends JComponent {
         int returnVal = chooserFileSave.showSaveDialog(mapPanel);
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             fileSave = chooserFileSave.getSelectedFile();
-            mapPanel.getActiveRoute().saveToGPXFile(fileSave);
+            activeRoute.saveToGPXFile(fileSave);
         }
     }
     
-    /*public void resizeRouteTableWidth() {
-        int width = 0;
-        for (int row = 0; row < tableRoutes.getRowCount(); row++) {
-            TableCellRenderer renderer = tableRoutes.getCellRenderer(row, 0);
-            Component comp = tableRoutes.prepareRenderer(renderer, row, 0);
-            width = Math.max (comp.getPreferredSize().width, width);
+    public Route getActiveRoute() {
+        return activeRoute;
+    }
+    
+    public void setActiveRoute(Route route) {
+        if (activeRoute != null) {
+            activeRoute.setActive(false);
         }
-        width = Math.max(width, scrollPaneRoutes.getWidth());
-        width -= 10;
-        System.out.println(width);
-    }*/
+        route.setActive(true);
+        activeRoute = route;
+        mapPanel.fitRouteToPanel(route);
+        resetRoutePropsTable();
+    }
+    
+    public void resetRoutePropsTable() {
+        tableModelRouteProps.setRowCount(0);
+        tableModelRouteProps.addRow(new Object[]{"type", activeRoute.getType()});
+        tableModelRouteProps.addRow(new Object[]{"# of pts", activeRoute.getNumPts()});
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z");
+        String startTime = sdf.format(activeRoute.getStart().getTime());
+        String endTime = sdf.format(activeRoute.getEnd().getTime());
+        tableModelRouteProps.addRow(new Object[]{"start time", startTime});
+        tableModelRouteProps.addRow(new Object[]{"end time", endTime});
+        long duration = activeRoute.getDuration();
+        long hours = duration / 3600000;
+        long minutes = (duration - hours * 3600000) / 60000;
+        long seconds = (duration - hours * 3600000 - minutes * 60000) / 1000;
+        tableModelRouteProps.addRow(new Object[]{"duration", hours + "hr " + minutes + "min " + seconds + "sec"});
+        double lengthMiles = activeRoute.getLengthMiles();
+        tableModelRouteProps.addRow(new Object[]{"length", String.format("%.2f mi", lengthMiles)});
+        tableModelRouteProps.addRow(new Object[]{"elevation (start)", String.format("%.0f ft", activeRoute.getEleStartFeet())});
+        tableModelRouteProps.addRow(new Object[]{"elevation (end)", String.format("%.0f ft", activeRoute.getEleEndFeet())});
+        tableModelRouteProps.addRow(new Object[]{"min elevation", String.format("%.0f ft", activeRoute.getEleMinFeet())});
+        tableModelRouteProps.addRow(new Object[]{"max elevation", String.format("%.0f ft", activeRoute.getEleMaxFeet())});
+        double grossRiseFeet = activeRoute.getGrossRiseFeet();
+        double grossFallFeet = activeRoute.getGrossFallFeet();
+        tableModelRouteProps.addRow(new Object[]{"gross rise", String.format("%.0f ft", grossRiseFeet)});
+        tableModelRouteProps.addRow(new Object[]{"gross fall", String.format("%.0f ft", grossFallFeet)});
+        double avgSpeedMph = (lengthMiles / duration) * 3600000;
+        tableModelRouteProps.addRow(new Object[]{"avg speed", String.format("%.1f mph", avgSpeedMph)});
+        tableModelRouteProps.addRow(new Object[]{"max speed", String.format("%.1f mph", activeRoute.getMaxSpeedMph())});
+        long riseTime = activeRoute.getRiseTime();
+        hours = riseTime / 3600000;
+        minutes = (riseTime - hours * 3600000) / 60000;
+        seconds = (riseTime - hours * 3600000 - minutes * 60000) / 1000;
+        tableModelRouteProps.addRow(new Object[]{"rise time", hours + "hr " + minutes + "min " + seconds + "sec"});
+        long fallTime = activeRoute.getFallTime();
+        hours = fallTime / 3600000;
+        minutes = (fallTime - hours * 3600000) / 60000;
+        seconds = (fallTime - hours * 3600000 - minutes * 60000) / 1000;
+        tableModelRouteProps.addRow(new Object[]{"fall time", hours + "hr " + minutes + "min " + seconds + "sec"});
+        double avgRiseSpeedFph = (grossRiseFeet / riseTime) * 3600000;
+        double avgFallSpeedFph = (grossFallFeet / fallTime) * 3600000;
+        tableModelRouteProps.addRow(new Object[]{"avg rise speed", String.format("%.1f ft/hr", avgRiseSpeedFph)});
+        tableModelRouteProps.addRow(new Object[]{"avg fall speed", String.format("%.1f ft/hr", avgFallSpeedFph)});
+    }
 }

@@ -5,6 +5,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
+import java.awt.Stroke;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +19,6 @@ import org.openstreetmap.gui.jmapviewer.OsmMercator;
 public class GPXPanel extends JMapViewer {
     
     private List<Route> routes;
-    private Route activeRoute;
 
     public GPXPanel() {
         super(new MemoryTileCache(), 16);
@@ -27,22 +27,13 @@ public class GPXPanel extends JMapViewer {
         mapController.setMovementEnabled(true);
         mapController.setWheelZoomEnabled(true);
         mapController.setMovementMouseButton(MouseEvent.BUTTON1);
-        this.setScrollWrapEnabled(false); // TODO fix paint methods to be faster when scrollwrap is enabled
+        this.setScrollWrapEnabled(false); // TODO still some wrap bugs for routes
         this.setZoomButtonStyle(ZOOM_BUTTON_STYLE.VERTICAL);
         routes = new ArrayList<Route>();
     }
     
     public void addRoute(Route route) {
         routes.add(route);
-        activeRoute = route;
-    }
-    
-    public Route getActiveRoute() {
-        return activeRoute;
-    }
-    
-    public void setActiveRoute(Route route) {
-        activeRoute = route;
     }
     
     @Override
@@ -51,87 +42,95 @@ public class GPXPanel extends JMapViewer {
         paintRoutes(g, routes);
     }
     
-    private void paintRoutes(Graphics g, List<Route> routes) { // TODO stop painting off-screen routes!
+    private void paintRoutes(Graphics g, List<Route> routes) {
         List<RoutePoint> routePoints;
         RoutePoint curr;
         RoutePoint prev;
         for (Route route : routes) {
             g.setColor(route.getColor());
-            if ((route.getLength()) >= 2) {
+            if ((route.getNumPts()) >= 2 && route.isVisible()) {
                 routePoints = route.getRoutePoints();
-                paintRoutePoint(g, curr = route.getStart());
+                curr = route.getStart();
+                //paintRoutePoint(g, curr);
                 for (int i = 1; i < routePoints.size(); i++) {
                     prev = curr;
                     curr = routePoints.get(i);
-                    paintRoutePoint(g, curr);
+                    //paintRoutePoint(g, curr);
                     paintRouteSegment(g, prev, curr);
                 }
             }
         }
     }
 
-    private void paintRoutePoint(Graphics g, RoutePoint curr) {
+    /*private void paintRoutePoint(Graphics g, RoutePoint curr) {
         Point p = getMapPosition(curr.getLat(), curr.getLon(), false);
         int r = 3;
         int d = 2 * r;
-        g.fillOval(p.x - r, p.y - r, d, d);
-        if (scrollWrapEnabled) {
-            Point pSave = p;
-            boolean keepWrapping = true;
-            int tileSize = getTileController().getTileSource().getTileSize();
-            int mapSize = tileSize << zoom;
-            while (keepWrapping) {
-                p.x -= mapSize;
-                g.fillOval(p.x - r, p.y - r, d, d);
-                if (p.x < 0) {
-                    keepWrapping = false;
+        if (p.x >= 0 && p.y >= 0 && p.x <= getWidth() && p.y <= getHeight()) {
+            g.fillOval(p.x - r, p.y - r, d, d);
+            if (scrollWrapEnabled) {
+                Point pSave = p;
+                boolean keepWrapping = true;
+                int tileSize = getTileController().getTileSource().getTileSize();
+                int mapSize = tileSize << zoom;
+                while (keepWrapping) {
+                    p.x -= mapSize;
+                    g.fillOval(p.x - r, p.y - r, d, d);
+                    if (p.x < 0) {
+                        keepWrapping = false;
+                    }
                 }
-            }
-            p = pSave;
-            keepWrapping = true;
-            while (keepWrapping) {
-                p.x += mapSize;
-                g.fillOval(p.x - r, p.y - r, d, d);
-                if (p.x > getWidth()) {
-                    keepWrapping = false;
+                p = pSave;
+                keepWrapping = true;
+                while (keepWrapping) {
+                    p.x += mapSize;
+                    g.fillOval(p.x - r, p.y - r, d, d);
+                    if (p.x > getWidth()) {
+                        keepWrapping = false;
+                    }
                 }
             }
         }
-    }
+    }*/
 
     private void paintRouteSegment(Graphics g, RoutePoint prev, RoutePoint curr) {
         Point p1 = getMapPosition(curr.getLat(), curr.getLon(), false);
         Point p2 = getMapPosition(prev.getLat(), prev.getLon(), false);
         Graphics2D g2d = (Graphics2D) g;
+        Stroke saveStroke = g2d.getStroke();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2d.setStroke(new BasicStroke(2));
-        g.drawLine(p1.x, p1.y, p2.x, p2.y);
-        if (scrollWrapEnabled) {
-            Point p1Save = p1;
-            Point p2Save = p2;
-            boolean keepWrapping = true;
-            int tileSize = getTileController().getTileSource().getTileSize();
-            int mapSize = tileSize << zoom;
-            while (keepWrapping) {
-                p1.x -= mapSize;
-                p2.x -= mapSize;
-                g.drawLine(p1.x, p1.y, p2.x, p2.y);
-                if (p1.x < 0 || p2.x < 0) {
-                    keepWrapping = false;
+        g2d.setStroke(new BasicStroke(3));
+        if ( (p1.x >= 0 && p1.y >= 0 && p1.x <= getWidth() && p1.y <= getHeight()) ||
+             (p2.x >= 0 && p2.y >= 0 && p2.x <= getWidth() && p2.y <= getHeight()) )  {
+            g.drawLine(p1.x, p1.y, p2.x, p2.y);
+            if (scrollWrapEnabled) {
+                Point p1Save = p1;
+                Point p2Save = p2;
+                boolean keepWrapping = true;
+                int tileSize = getTileController().getTileSource().getTileSize();
+                int mapSize = tileSize << zoom;
+                while (keepWrapping) {
+                    p1.x -= mapSize;
+                    p2.x -= mapSize;
+                    g.drawLine(p1.x, p1.y, p2.x, p2.y);
+                    if (p1.x < 0 || p2.x < 0) {
+                        keepWrapping = false;
+                    }
                 }
-            }
-            p1 = p1Save;
-            p2 = p2Save;
-            keepWrapping = true;
-            while (keepWrapping) {
-                p1.x += mapSize;
-                p2.x += mapSize;
-                g.drawLine(p1.x, p1.y, p2.x, p2.y);
-                if (p1.x > getWidth() || p2.x > getWidth()) {
-                    keepWrapping = false;
+                p1 = p1Save;
+                p2 = p2Save;
+                keepWrapping = true;
+                while (keepWrapping) {
+                    p1.x += mapSize;
+                    p2.x += mapSize;
+                    g.drawLine(p1.x, p1.y, p2.x, p2.y);
+                    if (p1.x > getWidth() || p2.x > getWidth()) {
+                        keepWrapping = false;
+                    }
                 }
             }
         }
+        g2d.setStroke(saveStroke);
     }
     
     public void fitRouteToPanel(Route route) {

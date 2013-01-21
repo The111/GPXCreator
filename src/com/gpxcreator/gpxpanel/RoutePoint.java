@@ -1,9 +1,13 @@
 package com.gpxcreator.gpxpanel;
 
+import java.util.Date;
+
 public class RoutePoint {
 
     private double lat;
     private double lon;
+    private double ele;
+    private Date time;
 
     public RoutePoint(double lat, double lon) {
         this.lat = lat;
@@ -24,5 +28,21 @@ public class RoutePoint {
 
     public void setLon(double lon) {
         this.lon = lon;
+    }
+
+    public double getEle() {
+        return ele;
+    }
+
+    public void setEle(double ele) {
+        this.ele = ele;
+    }
+
+    public Date getTime() {
+        return time;
+    }
+
+    public void setTime(Date time) {
+        this.time = time;
     }
 }
