@@ -37,6 +37,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.border.MatteBorder;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
 
@@ -44,8 +46,13 @@ import org.openstreetmap.gui.jmapviewer.OsmFileCacheTileLoader;
 
 import com.gpxcreator.gpxpanel.GPXPanel;
 import com.gpxcreator.gpxpanel.Route;
-import com.gpxcreator.tablecellrenderers.RouteColorCellRenderer;
-import com.gpxcreator.tablecellrenderers.RouteVisibleCellRenderer;
+import com.gpxcreator.table.RouteColorEditor;
+import com.gpxcreator.table.RouteColorRenderer;
+import com.gpxcreator.table.RouteNameEditor;
+import com.gpxcreator.table.RouteNameRenderer;
+import com.gpxcreator.table.RouteTableModel;
+import com.gpxcreator.table.RouteVisEditor;
+import com.gpxcreator.table.RouteVisRenderer;
 
 @SuppressWarnings("serial")
 public class GPXCreator extends JComponent {
@@ -66,7 +73,7 @@ public class GPXCreator extends JComponent {
                         private JLabel labelRoutesHeading;
                         private JLabel labelRoutesSubheading;
                     private JScrollPane scrollPaneRoutes;
-                        private DefaultTableModel tableModelRoutes;
+                        private RouteTableModel tableModelRoutes;
                         private JTable tableRoutes;
                 private JPanel containerLeftSidebarBottom;    // BOTTOM
                     private JPanel containerRouteProps;
@@ -139,8 +146,8 @@ public class GPXCreator extends JComponent {
         
         /* ------------------------------------------ SIDEBAR SPLIT PANE ------------------------------------------- */
         splitPaneSidebar = new JSplitPane();
-        splitPaneSidebar.setMinimumSize(new Dimension(280, 25));
-        splitPaneSidebar.setPreferredSize(new Dimension(280, 25));
+        splitPaneSidebar.setMinimumSize(new Dimension(240, 25));
+        splitPaneSidebar.setPreferredSize(new Dimension(240, 25));
         splitPaneSidebar.setContinuousLayout(true);
         splitPaneSidebar.setOrientation(JSplitPane.VERTICAL_SPLIT);
         splitPaneMain.setLeftComponent(splitPaneSidebar);
@@ -173,7 +180,7 @@ public class GPXCreator extends JComponent {
         labelRoutesHeading.setHorizontalAlignment(SwingConstants.LEFT);
         labelRoutesHeading.setFont(new Font("Segoe UI", Font.BOLD, 12));
         containerRoutesHeading.add(labelRoutesHeading);
-        labelRoutesSubheading = new JLabel("(active route shown in bold)");
+        labelRoutesSubheading = new JLabel("(active route shown in bold - click to activate/center)");
         labelRoutesSubheading.setBackground(Color.BLUE);
         labelRoutesSubheading.setMinimumSize(new Dimension(100, 14));
         labelRoutesSubheading.setPreferredSize(new Dimension(100, 14));
@@ -185,7 +192,7 @@ public class GPXCreator extends JComponent {
         containerRoutesHeading.add(labelRoutesSubheading);
         
         /* ------------------------------------------- ROUTE TABLE/MODEL ------------------------------------------- */
-        tableModelRoutes = new DefaultTableModel(new Object[]{"Visible", "Name", "Color"},0);
+        tableModelRoutes = new RouteTableModel();
         tableRoutes = new JTable(tableModelRoutes);
         tableRoutes.setAlignmentY(Component.TOP_ALIGNMENT);
         tableRoutes.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -195,10 +202,16 @@ public class GPXCreator extends JComponent {
         // tableRoutes.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         tableRoutes.setShowVerticalLines(false);
         tableRoutes.setTableHeader(null);
-        tableRoutes.setEnabled(false); // TODO <-- this is only temporary... until table can be developed further!
+        //tableRoutes.setEnabled(false); // TODO <-- this is only temporary... until table can be developed further!
         
-        tableRoutes.getColumn("Visible").setCellRenderer(new RouteVisibleCellRenderer());
-        tableRoutes.getColumn("Color").setCellRenderer(new RouteColorCellRenderer());
+        tableRoutes.setSelectionBackground(Color.white);
+        
+        tableRoutes.getColumn("Visible").setCellRenderer(new RouteVisRenderer());
+        tableRoutes.getColumn("Visible").setCellEditor(new RouteVisEditor());
+        tableRoutes.getColumn("Name").setCellRenderer(new RouteNameRenderer());
+        tableRoutes.getColumn("Name").setCellEditor(new RouteNameEditor(this));
+        tableRoutes.getColumn("Color").setCellRenderer(new RouteColorRenderer());
+        tableRoutes.getColumn("Color").setCellEditor(new RouteColorEditor());
 
         tableRoutes.getColumn("Visible").setPreferredWidth(14);
         tableRoutes.getColumn("Visible").setMinWidth(14);
@@ -206,6 +219,19 @@ public class GPXCreator extends JComponent {
         tableRoutes.getColumn("Color").setPreferredWidth(14);
         tableRoutes.getColumn("Color").setMinWidth(14);
         tableRoutes.getColumn("Color").setMaxWidth(14);
+        
+        tableModelRoutes.addTableModelListener(new TableModelListener() {
+            @Override
+            public void tableChanged(TableModelEvent e) {
+                if (e.getColumn() == 1) { // update active route
+                    Route route = (Route) tableModelRoutes.getValueAt(e.getLastRow(), e.getColumn());
+                    if (route.isActive()) {
+                        setActiveRoute(route);
+                    }
+                }
+                mapPanel.repaint(); // update route visibility on map
+            }
+        });
         
         /* ----------------------------------------- ROUTE TABLE SCROLLPANE ---------------------------------------- */
         scrollPaneRoutes = new JScrollPane(tableRoutes);
@@ -430,7 +456,7 @@ public class GPXCreator extends JComponent {
             fileOpened = chooserFileOpen.getSelectedFile();
             Route route = new Route(fileOpened);
             mapPanel.addRoute(route);
-            tableModelRoutes.addRow(new Object[]{route.isVisible(), route.getName(), route.getColor()});
+            tableModelRoutes.addRoute(route);
             int last = tableRoutes.getModel().getRowCount() - 1;
             Rectangle r = tableRoutes.getCellRect(last, 0, true);
             tableRoutes.scrollRectToVisible(r);
@@ -455,6 +481,7 @@ public class GPXCreator extends JComponent {
             activeRoute.setActive(false);
         }
         route.setActive(true);
+        route.setVisible(true);
         activeRoute = route;
         mapPanel.fitRouteToPanel(route);
         resetRoutePropsTable();

@@ -1,4 +1,4 @@
-package com.gpxcreator.tablecellrenderers;
+package com.gpxcreator.table;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -8,23 +8,31 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 
 import javax.swing.Icon;
+import javax.swing.JTable;
 import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellRenderer;
+
+import com.gpxcreator.gpxpanel.Route;
 
 @SuppressWarnings("serial")
-public class RouteColorCellRenderer extends DefaultTableCellRenderer implements Icon {
+public class RouteColorRenderer extends DefaultTableCellRenderer implements Icon, TableCellRenderer {
 
     private Color color;
     private static final int SIZE = 8;
     
-    public RouteColorCellRenderer() {
+    public RouteColorRenderer() {
         this.setIcon(this);
         this.setHorizontalAlignment(CENTER);
         this.setVerticalAlignment(CENTER);
     }
-
+    
     @Override
-    protected void setValue(Object value) {
-        this.color = (Color) value;
+    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
+            boolean hasFocus, int row, int col) {
+        Route route = (Route) value;
+        this.color = route.getColor();
+        this.setBackground(Color.white);
+        return this;
     }
 
     @Override
