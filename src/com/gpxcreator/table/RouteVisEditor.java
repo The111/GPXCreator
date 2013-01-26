@@ -20,7 +20,7 @@ public class RouteVisEditor extends AbstractCellEditor implements TableCellEdito
 
     private RouteVisEditorComponent editorComponent;
     private Route route;
-    
+
     public RouteVisEditor() {
         editorComponent = new RouteVisEditorComponent(false);
         editorComponent.addMouseListener(this);
@@ -39,10 +39,7 @@ public class RouteVisEditor extends AbstractCellEditor implements TableCellEdito
     @Override
     public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
         route = (Route) value;
-        boolean isVisible = route.isVisible();
-        isVisible = !isVisible;
-        route.setVisible(isVisible);
-        editorComponent.setValue(isVisible);
+        editorComponent.setValue(route.isVisible());
         editorComponent.setOpaque(isSelected);
         editorComponent.setBackground(table.getSelectionBackground());
         return editorComponent;
@@ -50,27 +47,28 @@ public class RouteVisEditor extends AbstractCellEditor implements TableCellEdito
 
     @Override
     public void mouseClicked(MouseEvent e) {
+        route.setVisible(!route.isVisible());
         this.fireEditingStopped();
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
+        route.setVisible(!route.isVisible());
         this.fireEditingStopped();
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
+        route.setVisible(!route.isVisible());
         this.fireEditingStopped();
     }
 
     @Override
     public void mouseEntered(MouseEvent e) {
-        this.fireEditingStopped();
     }
 
     @Override
     public void mouseExited(MouseEvent e) {
-        this.fireEditingStopped();
     }
     
     private class RouteVisEditorComponent extends JLabel {
@@ -80,8 +78,10 @@ public class RouteVisEditor extends AbstractCellEditor implements TableCellEdito
         
         public RouteVisEditorComponent(boolean value) {
             try {
-                visible = (new ImageIcon(ImageIO.read(GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/route-visible.png"))));
-                invisible = (new ImageIcon(ImageIO.read(GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/route-invisible.png"))));
+                visible = new ImageIcon(ImageIO.read(GPXCreator.class.getResourceAsStream(
+                        "/com/gpxcreator/icons/route-visible.png")));
+                invisible = new ImageIcon(ImageIO.read(GPXCreator.class.getResourceAsStream(
+                        "/com/gpxcreator/icons/route-invisible.png")));
             } catch (Exception e) {
                 e.printStackTrace();
             }

@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -37,6 +39,13 @@ public class Route {
     };
     private static int currentColor = 0;
 
+    private boolean inMetadata;
+    private Date time;
+    private double minLat;
+    private double minLon;
+    private double maxLat;
+    private double maxLon;
+
     private String type;
     private long duration;
     private double maxSpeedKmph;
@@ -66,9 +75,18 @@ public class Route {
      */
     public Route(String routeName) {
         this.visible = true;
-        this.name = routeName;
         this.routePoints = new ArrayList<RoutePoint>();
         this.color = colors[(currentColor++) % colors.length];
+        if (routeName.equals("")) {
+            this.name = "NewRoute" + unnamedCounter++;
+        } else {
+            this.name = routeName;
+        }
+        this.time = new Date();
+        this.minLat = Double.MAX_VALUE;
+        this.maxLat = Double.MIN_VALUE;
+        this.minLon = Double.MAX_VALUE;
+        this.maxLon = Double.MIN_VALUE;
     }
     
     /**
@@ -78,11 +96,14 @@ public class Route {
      *            The GPX file.
      */
     public Route(File gpx) {
-        boolean lookForName = false;
         this.visible = true;
         this.name = "";
         this.routePoints = new ArrayList<RoutePoint>();
         this.color = colors[(currentColor++) % colors.length];
+        this.minLat = Double.MAX_VALUE;
+        this.maxLat = -Double.MAX_VALUE;
+        this.minLon = Double.MAX_VALUE;
+        this.maxLon = -Double.MAX_VALUE;
         RoutePoint curr = null;
         double lat, lon;
         FileInputStream fis = null;
@@ -100,39 +121,60 @@ public class Route {
                 switch (xsr.getEventType()) {
                     case XMLStreamReader.START_ELEMENT:
                         switch (xsr.getLocalName()) {
+                            case "gpx":
+                                break;
+                            case "wpt":
                             case "rtept":
-                            case "trkpt":
+                            case "trkpt": // TODO handle multi-segment and multi-type sources?
                                 lat = Double.parseDouble(xsr.getAttributeValue("", "lat"));
                                 lon = Double.parseDouble(xsr.getAttributeValue("", "lon"));
                                 curr = new RoutePoint(lat, lon);
                                 this.addRoutePoint(curr);
+                                checkMinMaxLatLon(lat, lon);
                                 break;
                             case "metadata":
-                            case "rte":
-                            case "trk":
-                                lookForName = true;
+                                inMetadata = true;
                                 break;
                             case "type":
                                 xsr.next();
-                                this.type = xsr.getText();
+                                if (xsr.isCharacters()) {
+                                    this.type = xsr.getText();
+                                }
                                 break;
                             case "name":
-                                if (lookForName && this.name.equals("")) {
+                                if (this.name.equals("")) {
                                     xsr.next();
-                                    this.name = xsr.getText();
+                                    if (xsr.isCharacters()) {
+                                        this.name = xsr.getText();
+                                    }
                                 }
                                 break;
                             case "ele":
                                 xsr.next();
-                                curr.setEle(Double.parseDouble(xsr.getText()));
+                                if (xsr.isCharacters()) {
+                                    curr.setEle(Double.parseDouble(xsr.getText()));
+                                }
+                                // TODO add correct elevation for each point?
                                 break;
                             case "time":
-                                if (curr != null) {
+                                if (!inMetadata) {
+                                    if (curr != null) {
+                                        xsr.next();
+                                        if (xsr.isCharacters()) {
+                                            String time = xsr.getText();
+                                            Calendar cal = DatatypeConverter.parseDateTime(time);
+                                            Date date = cal.getTime();
+                                            curr.setTime(date);
+                                        }
+                                    }
+                                } else {
                                     xsr.next();
-                                    String time = xsr.getText();
-                                    Calendar cal = DatatypeConverter.parseDateTime(time);
-                                    Date date = cal.getTime();
-                                    curr.setTime(date);
+                                    if (xsr.isCharacters()) {
+                                        String timeTemp = xsr.getText();
+                                        Calendar cal = DatatypeConverter.parseDateTime(timeTemp);
+                                        Date date = cal.getTime();
+                                        this.time = date;
+                                    }
                                 }
                                 break;
                         }
@@ -140,9 +182,7 @@ public class Route {
                     case XMLStreamReader.END_ELEMENT:
                         switch (xsr.getLocalName()) {
                             case "metadata":
-                            case "rte":
-                            case "trk":
-                                lookForName = false;
+                                inMetadata = false;
                                 break;
                         }
                         break;
@@ -162,11 +202,18 @@ public class Route {
         if (this.name.equals("")) {
             this.name = "NewRoute" + unnamedCounter++;
         }
+        if (this.time == null) {
+            this.time = new Date();
+        }
         this.updateAllProperties();
     }
     
     public void addRoutePoint(RoutePoint wpt) {
         routePoints.add(wpt);
+        if (getNumPts() > 1) {
+            updateAllProperties(); // TODO make this less expensive?
+        }
+        checkMinMaxLatLon(wpt.getLat(), wpt.getLon());
     }
     
     public String getName() {
@@ -210,11 +257,19 @@ public class Route {
     }
 
     public RoutePoint getStart() {
-        return routePoints.get(0);
+        if (routePoints.size() > 0) {
+            return routePoints.get(0);
+        } else {
+            return null;
+        }
     }
 
     public RoutePoint getEnd() {
-        return routePoints.get(routePoints.size() - 1);
+        if (routePoints.size() > 0) {
+            return routePoints.get(routePoints.size() - 1);
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -224,11 +279,12 @@ public class Route {
      *            The GPX file.
      */
     public void saveToGPXFile(File gpx) {
-        String name = gpx.getName();
-        int lc = name.length() - 1;
-        if (name.charAt(lc--) != 'x' || name.charAt(lc--) != 'p'|| name.charAt(lc--) != 'g'|| name.charAt(lc) != '.') {
+        String fileName = gpx.getName();
+        int lc = fileName.length() - 1;
+        if (fileName.charAt(lc--) != 'x' || fileName.charAt(lc--) != 'p'||
+                fileName.charAt(lc--) != 'g'|| fileName.charAt(lc) != '.') {
             String dir = gpx.getParent();        
-            String newName = dir + "/" + name + ".gpx";
+            String newName = dir + "/" + fileName + ".gpx";
             gpx = new File(newName);
         }
         
@@ -241,35 +297,85 @@ public class Route {
         }
         XMLOutputFactory factory = XMLOutputFactory.newInstance();
         XMLStreamWriter xsw;
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
         try {
-            xsw = factory.createXMLStreamWriter(fos);
+            xsw = factory.createXMLStreamWriter(fos, "UTF-8");
             
-            xsw.writeStartDocument("1.0");
+            xsw.writeStartDocument("UTF-8", "1.0");
             xsw.writeCharacters("\n\n");
             
             xsw.writeStartElement("gpx");
+            xsw.writeAttribute("version", "1.1");
+            xsw.writeAttribute("creator", "www.gpxcreator.com");
+            xsw.writeAttribute("xmlns", "http://www.topografix.com/GPX/1/1");
+            xsw.writeAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+            xsw.writeAttribute("xsi:schemaLocation",
+                    "http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd");
+            xsw.writeCharacters("\n\n");
+            
+            xsw.writeStartElement("metadata");
+            xsw.writeCharacters("\n");
+            xsw.writeStartElement("name");
+            xsw.writeCharacters(this.name);
+            xsw.writeEndElement();
+            xsw.writeCharacters("\n");
+            xsw.writeStartElement("link");
+            xsw.writeAttribute("href", "http://www.gpxcreator.com");
+            xsw.writeCharacters("GPX Creator");
+            xsw.writeEndElement();
+            xsw.writeCharacters("\n");
+            xsw.writeStartElement("time");
+            String fileTime = df.format(time);
+            xsw.writeCharacters(fileTime);
+            xsw.writeEndElement();
+            xsw.writeCharacters("\n");
+            xsw.writeStartElement("bounds");
+            xsw.writeAttribute("minlat", String.format("%.8f", minLat));
+            xsw.writeAttribute("minlon", String.format("%.8f", minLon));
+            xsw.writeAttribute("maxlat", String.format("%.8f", maxLat));
+            xsw.writeAttribute("maxlon", String.format("%.8f", maxLon));
+            xsw.writeEndElement();
+            xsw.writeCharacters("\n");
+            xsw.writeEndElement();
+            xsw.writeCharacters("\n\n");
+            
+            xsw.writeStartElement("rte");
+            xsw.writeCharacters("\n");
+            xsw.writeStartElement("type");
+            xsw.writeCharacters(type);
+            xsw.writeEndElement();
             xsw.writeCharacters("\n\n");
 
             for (RoutePoint rtept : routePoints) {
                 xsw.writeStartElement("rtept");
-                xsw.writeAttribute("lat", ((Double) rtept.getLat()).toString());
-                xsw.writeAttribute("lon", ((Double) rtept.getLon()).toString());
+                xsw.writeAttribute("lat", String.format("%.8f", (Double) rtept.getLat()));
+                xsw.writeAttribute("lon", String.format("%.8f", (Double) rtept.getLon()));
                 xsw.writeCharacters("\n");
-                
+                xsw.writeStartElement("ele");
+                xsw.writeCharacters(String.format("%.6f", (Double) rtept.getEle()));
+                xsw.writeEndElement();
+                xsw.writeCharacters("\n");
+                xsw.writeStartElement("time");
+                if (rtept.getTime() != null) {
+                    String timeString = df.format(rtept.getTime());
+                    xsw.writeCharacters(timeString);
+                }
+                xsw.writeEndElement();
+                xsw.writeCharacters("\n");
                 xsw.writeEndElement();
                 xsw.writeCharacters("\n");
             }
             xsw.writeCharacters("\n");
             xsw.writeEndElement();
+            xsw.writeCharacters("\n\n");
+            xsw.writeEndElement();
             xsw.writeEndDocument();
-
             xsw.flush();
             xsw.close();
         } catch (XMLStreamException e) {
             System.err.println("Error while writing GPX file.");
             e.printStackTrace();
         }
-
         try {
             fos.flush();
             fos.close();
@@ -287,7 +393,11 @@ public class Route {
     }
     
     public void updateDuration() {
-        duration = getEnd().getTime().getTime()- getStart().getTime().getTime();
+        Date startTime = getEnd().getTime();
+        Date endTime = getEnd().getTime();
+        if (startTime != null && endTime != null) {
+            duration = getEnd().getTime().getTime()- getStart().getTime().getTime();
+        }
     }
     
     public void updateLength() {
@@ -319,12 +429,17 @@ public class Route {
         for (int i = smoothingFactor; i < getNumPts(); i++)  {
             segEnd = routePoints.get(i);
             segStart = routePoints.get(i - smoothingFactor);
-            lengthKm = OsmMercator.getDistance(segStart.getLat(), segStart.getLon(), segEnd.getLat(), segEnd.getLon()) / 1000;
-            millis = segEnd.getTime().getTime() - segStart.getTime().getTime();
-            hours = (double) millis / 3600000D;
-            double candidateMax = lengthKm / hours;
-            if (!Double.isNaN(candidateMax)) {
-                maxSpeedKmph = Math.max(maxSpeedKmph, lengthKm / hours);
+            lengthKm = OsmMercator.getDistance(
+                    segStart.getLat(), segStart.getLon(), segEnd.getLat(), segEnd.getLon()) / 1000;
+            Date startTime = getEnd().getTime();
+            Date endTime = getEnd().getTime();
+            if (startTime != null && endTime != null) {
+                millis = segEnd.getTime().getTime() - segStart.getTime().getTime();
+                hours = (double) millis / 3600000D;
+                double candidateMax = lengthKm / hours;
+                if (!Double.isNaN(candidateMax)) {
+                    maxSpeedKmph = Math.max(maxSpeedKmph, lengthKm / hours);
+                }
             }
         }
         maxSpeedMph = maxSpeedKmph * 0.621371;
@@ -343,15 +458,21 @@ public class Route {
         fallTime = 0;
         RoutePoint curr = getStart();
         RoutePoint prev;
+        Date startTime = getEnd().getTime();
+        Date endTime = getEnd().getTime();
         for (RoutePoint rtept : routePoints) {
             prev = curr;
             curr = rtept;
             if (curr.getEle() > prev.getEle()) {
                 grossRiseMeters += (curr.getEle() - prev.getEle());
-                riseTime += curr.getTime().getTime() - prev.getTime().getTime();
-            } else {
+                if (startTime != null && endTime != null) {
+                    riseTime += curr.getTime().getTime() - prev.getTime().getTime();
+                }
+            } else if (curr.getEle() < prev.getEle()) {
                 grossFallMeters += (prev.getEle() - curr.getEle());
-                fallTime += curr.getTime().getTime() - prev.getTime().getTime();
+                if (startTime != null && endTime != null) {
+                    fallTime += curr.getTime().getTime() - prev.getTime().getTime();
+                }
             }
             eleMinMeters = Math.min(eleMinMeters, curr.getEle());
             eleMaxMeters = Math.max(eleMaxMeters, curr.getEle());
@@ -440,5 +561,28 @@ public class Route {
 
     public long getFallTime() {
         return fallTime;
+    }
+    
+    public double getMinLat() {
+        return minLat;
+    }
+
+    public double getMinLon() {
+        return minLon;
+    }
+
+    public double getMaxLat() {
+        return maxLat;
+    }
+
+    public double getMaxLon() {
+        return maxLon;
+    }
+
+    public void checkMinMaxLatLon(double lat, double lon) {
+        minLat = Math.min(minLat, lat);
+        maxLat = Math.max(maxLat, lat);
+        minLon = Math.min(minLon, lon);
+        maxLon = Math.max(maxLon, lon);
     }
 }

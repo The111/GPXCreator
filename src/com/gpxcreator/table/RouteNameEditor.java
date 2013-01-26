@@ -39,8 +39,9 @@ public class RouteNameEditor extends AbstractCellEditor implements TableCellEdit
     @Override
     public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
         route = (Route) value;
-        route.setActive(true);
-        editorComponent.setActive(true);
+        boolean isActive = route.isActive();
+        editorComponent.setName(route.getName());
+        editorComponent.setActive(isActive);
         editorComponent.setOpaque(isSelected);
         editorComponent.setBackground(table.getSelectionBackground());
         return editorComponent;
@@ -48,42 +49,49 @@ public class RouteNameEditor extends AbstractCellEditor implements TableCellEdit
 
     @Override
     public void mouseClicked(MouseEvent e) {
+        route.setActive(true);
         this.fireEditingStopped();
     }
 
     @Override
     public void mousePressed(MouseEvent e) {
+        route.setActive(true);
         this.fireEditingStopped();
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
+        route.setActive(true);
         this.fireEditingStopped();
     }
 
     @Override
     public void mouseEntered(MouseEvent e) {
-        this.fireEditingStopped();
     }
 
     @Override
     public void mouseExited(MouseEvent e) {
-        this.fireEditingStopped();
     }
     
-    private class RouteNameEditorComponent extends JLabel {
-
-        public void setActive(boolean active) {
-            if (active) {
-                setFont(new Font("Tahoma", Font.BOLD, 11));
-            } else {
-                setFont(new Font("Tahoma", Font.PLAIN, 11));
-            }
-            setText(route.getName());
+    private static class RouteNameEditorComponent extends JLabel {
+        
+        private static final Font BOLD = new Font("Tahoma", Font.BOLD, 11);
+        private static final Font PLAIN = new Font("Tahoma", Font.PLAIN, 11);
+        
+        public void setName(String name) {
+            setText(name);
             setHorizontalAlignment(LEFT);
             setVerticalAlignment(CENTER);
             setBorder(null);
             setBackground(Color.white);
+        }
+        
+        public void setActive(boolean active) {
+            if (active) {
+                setFont(BOLD);
+            } else {
+                setFont(PLAIN);
+            }
         }
     }
 }

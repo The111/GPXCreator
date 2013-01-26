@@ -36,6 +36,10 @@ public class GPXPanel extends JMapViewer {
         routes.add(route);
     }
     
+    public void removeRoute(Route route) {
+        routes.remove(route);
+    }
+    
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -93,7 +97,7 @@ public class GPXPanel extends JMapViewer {
         }
     }*/
 
-    private void paintRouteSegment(Graphics g, RoutePoint prev, RoutePoint curr) {
+    private void paintRouteSegment(Graphics g, RoutePoint prev, RoutePoint curr) { // TODO smooth sharp corners?
         Point p1 = getMapPosition(curr.getLat(), curr.getLon(), false);
         Point p2 = getMapPosition(prev.getLat(), prev.getLon(), false);
         Graphics2D g2d = (Graphics2D) g;
@@ -134,34 +138,32 @@ public class GPXPanel extends JMapViewer {
     }
     
     public void fitRouteToPanel(Route route) {
-        int xMin = Integer.MAX_VALUE;
-        int yMin = Integer.MAX_VALUE;
-        int xMax = Integer.MIN_VALUE;
-        int yMax = Integer.MIN_VALUE;
-        int maxZoom = tileController.getTileSource().getMaxZoom();
-        for (RoutePoint rtept : route.getRoutePoints()) {
-            int x = OsmMercator.LonToX(rtept.getLon(), maxZoom);
-            int y = OsmMercator.LatToY(rtept.getLat(), maxZoom);
-            xMax = Math.max(xMax, x);
-            yMax = Math.max(yMax, y);
-            xMin = Math.min(xMin, x);
-            yMin = Math.min(yMin, y);
+        if (route.getNumPts() > 0 ) {
+
+            int maxZoom = tileController.getTileSource().getMaxZoom();
+            int xMin = OsmMercator.LonToX(route.getMinLon(), maxZoom);
+            int xMax = OsmMercator.LonToX(route.getMaxLon(), maxZoom);
+            int yMin = OsmMercator.LatToY(route.getMaxLat(), maxZoom); // screen y-axis positive is down
+            int yMax = OsmMercator.LatToY(route.getMinLat(), maxZoom); // screen y-axis positive is down
+            
+            int width = Math.max(0, getWidth());
+            int height = Math.max(0, getHeight());
+            int zoom = maxZoom;
+            int x = xMax - xMin;
+            int y = yMax - yMin;
+            while (x > width || y > height) {
+                zoom--;
+                x >>= 1;
+                y >>= 1;
+            }
+            x = xMin + (xMax - xMin) / 2;
+            y = yMin + (yMax - yMin) / 2;
+            int z = 1 << (maxZoom - zoom);
+            x /= z;
+            y /= z;
+            setDisplayPosition(x, y, zoom);
+        } else {
+            setDisplayPositionByLatLon(36, -98, 4);
         }
-        int width = Math.max(0, getWidth());
-        int height = Math.max(0, getHeight());
-        int zoom = maxZoom;
-        int x = xMax - xMin;
-        int y = yMax - yMin;
-        while (x > width || y > height) {
-            zoom--;
-            x >>= 1;
-            y >>= 1;
-        }
-        x = xMin + (xMax - xMin) / 2;
-        y = yMin + (yMax - yMin) / 2;
-        int z = 1 << (maxZoom - zoom);
-        x /= z;
-        y /= z;
-        setDisplayPosition(x, y, zoom);
     }    
 }

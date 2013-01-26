@@ -13,26 +13,19 @@ import com.gpxcreator.gpxpanel.Route;
 @SuppressWarnings("serial")
 public class RouteNameRenderer extends DefaultTableCellRenderer implements TableCellRenderer {
     
-    private Font activeBold;
-    private Font inactivePlain;
-    
-    public RouteNameRenderer() {
-        activeBold = new Font("Tahoma", Font.BOLD, 11);
-        inactivePlain = new Font("Tahoma", Font.PLAIN, 11);
-    }
+    private static final Font BOLD = new Font("Tahoma", Font.BOLD, 11);
+    private static final Font PLAIN = new Font("Tahoma", Font.PLAIN, 11);
     
     @Override
     public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
             boolean hasFocus, int row, int col) {
         Route route = (Route) value;
         String routeName = route.getName();
-        Font font = null;
         if (route.isActive()) {
-            font = activeBold;
+            setFont(BOLD);
         } else {
-            font = inactivePlain;
+            setFont(PLAIN);
         }
-        setFont(font);
         setText(routeName);
         setHorizontalAlignment(LEFT);
         setVerticalAlignment(CENTER);

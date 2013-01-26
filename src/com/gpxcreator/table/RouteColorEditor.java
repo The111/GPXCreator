@@ -6,12 +6,14 @@ import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.image.BufferedImage;
+import java.util.EventObject;
 
+import javax.imageio.ImageIO;
 import javax.swing.AbstractCellEditor;
 import javax.swing.JColorChooser;
 import javax.swing.JDialog;
@@ -36,7 +38,21 @@ public class RouteColorEditor extends AbstractCellEditor implements TableCellEdi
         editorComponent.addMouseListener(this);
         colorChooser = new JColorChooser();
         dialog = JColorChooser.createDialog(editorComponent, "Choose a Color", true, colorChooser, this, null);
-        dialog.setIconImage(Toolkit.getDefaultToolkit().getImage(GPXCreator.class.getResource("/com/gpxcreator/icons/gpxcreator.png")));
+        /*dialog.setIconImage(Toolkit.getDefaultToolkit().getImage(GPXCreator.class.getResource(
+                "/com/gpxcreator/icons/color-palette.png")));*/
+        BufferedImage img = null;
+        try {
+            img = ImageIO.read(GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/color-palette.png"));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        dialog.setIconImage(img);
+        
+    }
+    
+    @Override
+    public boolean isCellEditable(EventObject e) {
+        return (e instanceof MouseEvent);
     }
 
     public Object getCellEditorValue() {
@@ -52,6 +68,9 @@ public class RouteColorEditor extends AbstractCellEditor implements TableCellEdi
     
     @Override
     public void mouseClicked(MouseEvent e) {
+        colorChooser.setColor(currentColor);
+        dialog.setVisible(true);
+        this.fireEditingStopped();
     }
 
     @Override
@@ -63,6 +82,9 @@ public class RouteColorEditor extends AbstractCellEditor implements TableCellEdi
 
     @Override
     public void mouseReleased(MouseEvent e) {
+        colorChooser.setColor(currentColor);
+        dialog.setVisible(true);
+        this.fireEditingStopped();
     }
 
     @Override
@@ -79,19 +101,19 @@ public class RouteColorEditor extends AbstractCellEditor implements TableCellEdi
         route.setColor(currentColor);
     }
 
-    private class RouteColorEditorComponent extends JLabel {
+    private static class RouteColorEditorComponent extends JLabel {
     
         private Color color;
         private static final int SIZE = 8;
         
         public RouteColorEditorComponent(Color color) {
             this.color = color;
+            setHorizontalAlignment(CENTER);
+            setVerticalAlignment(CENTER);
         }
         
         public void setColor(Color color) {
             this.color = color;
-            setHorizontalAlignment(CENTER);
-            setVerticalAlignment(CENTER);
         }
         
         @Override
