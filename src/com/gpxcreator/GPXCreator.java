@@ -11,6 +11,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -22,9 +23,11 @@ import java.util.Date;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -51,6 +54,11 @@ import javax.swing.table.DefaultTableModel;
 
 import org.openstreetmap.gui.jmapviewer.OsmFileCacheTileLoader;
 import org.openstreetmap.gui.jmapviewer.OsmMercator;
+import org.openstreetmap.gui.jmapviewer.interfaces.TileSource;
+import org.openstreetmap.gui.jmapviewer.tilesources.BingAerialTileSource;
+import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOpenAerialTileSource;
+import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOsmTileSource;
+import org.openstreetmap.gui.jmapviewer.tilesources.OsmTileSource;
 
 import com.gpxcreator.gpxpanel.GPXPanel;
 import com.gpxcreator.gpxpanel.Route;
@@ -80,6 +88,9 @@ public class GPXCreator extends JComponent {
             private JButton btnEditRouteProperties;
             private JToggleButton btnEditRouteAddPoints;
             private JToggleButton btnEditRouteDelPoints;
+            private JButton btnEleChart;
+            private JButton btnCorrectEle;
+            private JComboBox<String> comboBoxTileSource;
         private JSplitPane splitPaneMain;   // CENTER
             private JSplitPane splitPaneSidebar;    // LEFT
                 private JPanel containerLeftSidebarTop;        // TOP
@@ -465,12 +476,12 @@ public class GPXCreator extends JComponent {
         toolBarMain.add(btnEditRouteDelPoints);
         
         /* --------------------------------------- CORRECT ELEVATION BUTTON ---------------------------------------- */
-        JButton correctElevation = new JButton("");
-        correctElevation.setToolTipText("Correct elevation");
-        correctElevation.setIcon(new ImageIcon(
+        btnCorrectEle = new JButton("");
+        btnCorrectEle.setToolTipText("Correct elevation");
+        btnCorrectEle.setIcon(new ImageIcon(
                 GPXCreator.class.getResource("/com/gpxcreator/icons/correct-elevation.png")));
-        correctElevation.setFocusable(false);
-        correctElevation.addMouseListener(new MouseAdapter() {
+        btnCorrectEle.setFocusable(false);
+        btnCorrectEle.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (activeRoute != null) {
@@ -479,15 +490,15 @@ public class GPXCreator extends JComponent {
                 }
             }
         });
-        toolBarMain.add(correctElevation);
+        toolBarMain.add(btnCorrectEle);
         
         /* ---------------------------------------- ELEVATION CHART BUTTON ----------------------------------------- */
-        JButton elevationChart = new JButton("");
-        elevationChart.setToolTipText("View elevation profile chart");
-        elevationChart.setIcon(new ImageIcon(
+        btnEleChart = new JButton("");
+        btnEleChart.setToolTipText("View elevation profile chart");
+        btnEleChart.setIcon(new ImageIcon(
                 GPXCreator.class.getResource("/com/gpxcreator/icons/elevation-chart.png")));
-        elevationChart.setFocusable(false);
-        elevationChart.addMouseListener(new MouseAdapter() {
+        btnEleChart.setFocusable(false);
+        btnEleChart.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (activeRoute != null) {
@@ -508,7 +519,51 @@ public class GPXCreator extends JComponent {
                 }
             }
         });
-        toolBarMain.add(elevationChart);
+        toolBarMain.add(btnEleChart);
+        
+        toolBarMain.add(Box.createHorizontalGlue());
+        
+        /* ----------------------------------------- TILE SOURCE SELECTOR ------------------------------------------ */
+        final TileSource openStreetMap = new OsmTileSource.Mapnik();
+        final TileSource openCycleMap = new OsmTileSource.CycleMap(); 
+        final TileSource bingAerial = new BingAerialTileSource();
+        final TileSource mapQuestOsm = new MapQuestOsmTileSource();
+        final TileSource mapQuestOpenAerial = new MapQuestOpenAerialTileSource();
+        comboBoxTileSource = new JComboBox<String>();
+        comboBoxTileSource.addItem("OpenStreetMap");
+        comboBoxTileSource.addItem("OpenCycleMap");
+        comboBoxTileSource.addItem("Bing Aerial");
+        comboBoxTileSource.addItem("MapQuest-OSM");
+        comboBoxTileSource.addItem("MapQuest Open Aerial");
+        comboBoxTileSource.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String selected = (String) comboBoxTileSource.getSelectedItem();
+                switch (selected) {
+                    case "OpenStreetMap":
+                        mapPanel.setTileSource(openStreetMap);
+                        break;
+                    case "OpenCycleMap":
+                        mapPanel.setTileSource(openCycleMap);
+                        break;
+                    case "Bing Aerial":
+                        mapPanel.setTileSource(bingAerial);
+                        break;
+                    case "MapQuest-OSM":
+                        mapPanel.setTileSource(mapQuestOsm);
+                        break;
+                    case "MapQuest Open Aerial":
+                        mapPanel.setTileSource(mapQuestOpenAerial);
+                        break;
+                }
+            }
+        });
+        comboBoxTileSource.setFocusable(false);
+        comboBoxTileSource.setPreferredSize(new Dimension(150, 22));
+        comboBoxTileSource.setMinimumSize(new Dimension(50, 22));
+        comboBoxTileSource.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        comboBoxTileSource.setMaximumSize(new Dimension(20, 24));
+        toolBarMain.add(comboBoxTileSource);
         
         // button for quick easy debugging
         /*JButton debug = new JButton("debug something");
@@ -528,13 +583,15 @@ public class GPXCreator extends JComponent {
     public void routeNew() {
         String name = (String)JOptionPane.showInputDialog(frame, "Please type a name for the new route:",
                 "New route", JOptionPane.PLAIN_MESSAGE, null, null, null);
-        Route route = new Route(name);
-        mapPanel.addRoute(route);
-        tableModelRoutes.addRoute(route);
-        int last = tableRoutes.getModel().getRowCount() - 1;
-        Rectangle r = tableRoutes.getCellRect(last, 0, true);
-        tableRoutes.scrollRectToVisible(r);
-        setActiveRoute(route);
+        if (name != null) {
+            Route route = new Route(name);
+            mapPanel.addRoute(route);
+            tableModelRoutes.addRoute(route);
+            int last = tableRoutes.getModel().getRowCount() - 1;
+            Rectangle r = tableRoutes.getCellRect(last, 0, true);
+            tableRoutes.scrollRectToVisible(r);
+            setActiveRoute(route);
+        }
     }
     
     public void fileOpen() {
