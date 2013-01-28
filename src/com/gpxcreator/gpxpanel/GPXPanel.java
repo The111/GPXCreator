@@ -1,12 +1,14 @@
 package com.gpxcreator.gpxpanel;
 
 import java.awt.BasicStroke;
+import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.event.MouseEvent;
+import java.awt.geom.GeneralPath;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +29,7 @@ public class GPXPanel extends JMapViewer {
         mapController.setMovementEnabled(true);
         mapController.setWheelZoomEnabled(true);
         mapController.setMovementMouseButton(MouseEvent.BUTTON1);
-        this.setScrollWrapEnabled(false); // TODO still some wrap bugs for routes
+        this.setScrollWrapEnabled(false); // TODO fix wrap bugs for routes (wrap not implemented at all for routePath)
         this.setZoomButtonStyle(ZOOM_BUTTON_STYLE.VERTICAL);
         routes = new ArrayList<Route>();
     }
@@ -47,23 +49,54 @@ public class GPXPanel extends JMapViewer {
     }
     
     private void paintRoutes(Graphics g, List<Route> routes) {
-        List<RoutePoint> routePoints;
-        RoutePoint curr;
-        RoutePoint prev;
         for (Route route : routes) {
             g.setColor(route.getColor());
             if ((route.getNumPts()) >= 2 && route.isVisible()) {
-                routePoints = route.getRoutePoints();
-                curr = route.getStart();
-                //paintRoutePoint(g, curr);
-                for (int i = 1; i < routePoints.size(); i++) {
-                    prev = curr;
-                    curr = routePoints.get(i);
-                    //paintRoutePoint(g, curr);
-                    paintRouteSegment(g, prev, curr);
-                }
+                paintRoute(g, route);
             }
         }
+    }
+    
+    private void paintRoute(Graphics g, Route route) {
+        List<RoutePoint> routePoints = route.getRoutePoints();
+        GeneralPath routePath;
+        RoutePoint rtept;
+        Point point;
+        
+        Graphics2D g2d = (Graphics2D) g;
+        Stroke saveStroke = g2d.getStroke();
+        Color saveColor = g2d.getColor();
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        // draw black border
+        g2d.setStroke(new BasicStroke(5.5f));
+        g2d.setColor(Color.BLACK);
+        routePath = new GeneralPath();
+        rtept = route.getStart();
+        point = getMapPosition(rtept.getLat(), rtept.getLon(), false);
+        routePath.moveTo(point.x, point.y);
+        for (int i = 1; i < routePoints.size(); i++) {
+            rtept = routePoints.get(i);
+            point = getMapPosition(rtept.getLat(), rtept.getLon(), false);
+            routePath.lineTo(point.x, point.y);
+        }
+        g2d.draw(routePath);
+
+        // draw colored route
+        g2d.setStroke(new BasicStroke(3));
+        g2d.setColor(saveColor);
+        routePath = new GeneralPath();
+        rtept = route.getStart();
+        point = getMapPosition(rtept.getLat(), rtept.getLon(), false);
+        routePath.moveTo(point.x, point.y);
+        for (int i = 1; i < routePoints.size(); i++) {
+            rtept = routePoints.get(i);
+            point = getMapPosition(rtept.getLat(), rtept.getLon(), false);
+            routePath.lineTo(point.x, point.y);
+        }
+        g2d.draw(routePath);
+        
+        g2d.setStroke(saveStroke);
     }
 
     /*private void paintRoutePoint(Graphics g, RoutePoint curr) {
@@ -97,7 +130,7 @@ public class GPXPanel extends JMapViewer {
         }
     }*/
 
-    private void paintRouteSegment(Graphics g, RoutePoint prev, RoutePoint curr) { // TODO smooth sharp corners?
+    /*private void paintRouteSegment(Graphics g, RoutePoint prev, RoutePoint curr) {
         Point p1 = getMapPosition(curr.getLat(), curr.getLon(), false);
         Point p2 = getMapPosition(prev.getLat(), prev.getLon(), false);
         Graphics2D g2d = (Graphics2D) g;
@@ -135,7 +168,7 @@ public class GPXPanel extends JMapViewer {
             }
         }
         g2d.setStroke(saveStroke);
-    }
+    }*/
     
     public void fitRouteToPanel(Route route) {
         if (route.getNumPts() > 0 ) {

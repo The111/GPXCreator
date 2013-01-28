@@ -14,6 +14,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -95,9 +96,8 @@ public class GPXCreator extends JComponent {
                         private DefaultTableModel tableModelRouteProps;
                         private JTable tableRouteProps;
             private GPXPanel mapPanel;              // RIGHT
-            
-    private Route activeRoute;
-    private MouseAdapter mapClickListener;
+            private Route activeRoute;
+            private MouseAdapter mapClickListener;
 
     /**
      * Launch the application.
@@ -144,7 +144,6 @@ public class GPXCreator extends JComponent {
         double width = screenSize.getWidth();
         double height = screenSize.getHeight();
         frame.setBounds(300, 188, (int) (width - 600), (int) (height - 376));
-        // frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
         /* -------------------------------------------- MAIN SPLIT PANE -------------------------------------------- */
@@ -188,7 +187,8 @@ public class GPXCreator extends JComponent {
         containerRoutesHeading.setAlignmentX(Component.LEFT_ALIGNMENT);
         containerRoutesHeading.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
         containerRoutesHeading.setLayout(new BoxLayout(containerRoutesHeading, BoxLayout.Y_AXIS));
-        containerRoutesHeading.setBorder(new CompoundBorder(new MatteBorder(0, 1, 0, 1, (Color) new Color(0, 0, 0)), new EmptyBorder(2, 5, 5, 5)));
+        containerRoutesHeading.setBorder(new CompoundBorder(
+                new MatteBorder(0, 1, 0, 1, (Color) new Color(0, 0, 0)), new EmptyBorder(2, 5, 5, 5)));
         containerLeftSidebarTop.add(containerRoutesHeading);
         
         /* -------------------------------------------- ROUTES HEADING --------------------------------------------- */
@@ -217,28 +217,21 @@ public class GPXCreator extends JComponent {
         tableRoutes.setAlignmentX(Component.LEFT_ALIGNMENT);
         tableRoutes.setBorder(new EmptyBorder(0, 0, 0, 0));
         tableRoutes.setFillsViewportHeight(true);
-        
-        // tableRoutes.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         tableRoutes.setShowVerticalLines(false);
         tableRoutes.setTableHeader(null);
-        //tableRoutes.setEnabled(false); // TODO <-- this is only temporary... until table can be developed further!
-        
         tableRoutes.setSelectionBackground(Color.white);
-        
         tableRoutes.getColumn("Visible").setCellRenderer(new RouteVisRenderer());
         tableRoutes.getColumn("Visible").setCellEditor(new RouteVisEditor());
         tableRoutes.getColumn("Name").setCellRenderer(new RouteNameRenderer());
         tableRoutes.getColumn("Name").setCellEditor(new RouteNameEditor(this));
         tableRoutes.getColumn("Color").setCellRenderer(new RouteColorRenderer());
         tableRoutes.getColumn("Color").setCellEditor(new RouteColorEditor());
-
         tableRoutes.getColumn("Visible").setPreferredWidth(14);
         tableRoutes.getColumn("Visible").setMinWidth(14);
         tableRoutes.getColumn("Visible").setMaxWidth(14);
         tableRoutes.getColumn("Color").setPreferredWidth(14);
         tableRoutes.getColumn("Color").setMinWidth(14);
         tableRoutes.getColumn("Color").setMaxWidth(14);
-        
         tableModelRoutes.addTableModelListener(new TableModelListener() {
             @Override
             public void tableChanged(TableModelEvent e) {
@@ -273,7 +266,8 @@ public class GPXCreator extends JComponent {
         containerRouteProps.setAlignmentX(Component.LEFT_ALIGNMENT);
         containerRouteProps.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
         containerRouteProps.setLayout(new BoxLayout(containerRouteProps, BoxLayout.Y_AXIS));
-        containerRouteProps.setBorder(new CompoundBorder(new MatteBorder(0, 1, 0, 1, (Color) new Color(0, 0, 0)), new EmptyBorder(2, 5, 5, 5)));
+        containerRouteProps.setBorder(new CompoundBorder(
+                new MatteBorder(0, 1, 0, 1, (Color) new Color(0, 0, 0)), new EmptyBorder(2, 5, 5, 5)));
         containerLeftSidebarBottom.add(containerRouteProps);
         
         /* --------------------------------------- ROUTE PROPERTIES HEADING ---------------------------------------- */
@@ -292,12 +286,8 @@ public class GPXCreator extends JComponent {
         tableRouteProps.setAlignmentX(Component.LEFT_ALIGNMENT);
         tableRouteProps.setBorder(new EmptyBorder(0, 0, 0, 0));
         tableRouteProps.setFillsViewportHeight(true);
-        
-        //tableRouteProps.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-        //tableRouteProps.setShowVerticalLines(false);
         tableRouteProps.setTableHeader(null);
-        tableRouteProps.setEnabled(false); // TODO <-- this is only temporary... until table can be developed further!
-        
+        tableRouteProps.setEnabled(false);
         tableRouteProps.getColumn("Name").setPreferredWidth(100);
         tableRouteProps.getColumn("Name").setMinWidth(100);
         tableRouteProps.getColumn("Value").setPreferredWidth(140);
@@ -329,7 +319,8 @@ public class GPXCreator extends JComponent {
         btnRouteNew.setFocusable(false);
         btnRouteNew.setIcon(new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/route-new.png")));
         String ctrlNew = "CTRL+N";
-        mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_N, KeyEvent.CTRL_DOWN_MASK), ctrlNew);
+        mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_N, KeyEvent.CTRL_DOWN_MASK), ctrlNew);
         mapPanel.getActionMap().put(ctrlNew, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -342,7 +333,8 @@ public class GPXCreator extends JComponent {
         FileNameExtensionFilter gpxFilter = new FileNameExtensionFilter("GPX files (*.gpx)", "gpx");
         btnFileOpen = new JButton("");
         chooserFileOpen = new JFileChooser();
-        chooserFileOpen.setCurrentDirectory(new File("C:\\eclipse\\workspace\\GPXCreator\\IO")); // TODO change dir before deployment
+        chooserFileOpen.setCurrentDirectory(new File("C:\\eclipse\\workspace\\GPXCreator\\IO")); // TODO
+                                                                                        // change dir before deployment
         chooserFileOpen.addChoosableFileFilter(gpxFilter);
         chooserFileOpen.setFileFilter(gpxFilter);
         btnFileOpen.addMouseListener(new MouseAdapter() {
@@ -355,7 +347,8 @@ public class GPXCreator extends JComponent {
         btnFileOpen.setFocusable(false);
         btnFileOpen.setIcon(new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/file-open.png")));
         String ctrlOpen = "CTRL+O";
-        mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK), ctrlOpen);
+        mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK), ctrlOpen);
         mapPanel.getActionMap().put(ctrlOpen, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -367,7 +360,8 @@ public class GPXCreator extends JComponent {
         /* ---------------------------------------------- SAVE BUTTON ---------------------------------------------- */
         btnFileSave = new JButton("");
         chooserFileSave = new JFileChooser();
-        chooserFileSave.setCurrentDirectory(new File("C:\\eclipse\\workspace\\GPXCreator\\IO")); // TODO change dir before deployment
+        chooserFileSave.setCurrentDirectory(new File("C:\\eclipse\\workspace\\GPXCreator\\IO")); // TODO
+                                                                                        // change dir before deployment
         chooserFileSave.addChoosableFileFilter(gpxFilter);
         chooserFileSave.setFileFilter(gpxFilter);
         btnFileSave.addMouseListener(new MouseAdapter() {
@@ -380,7 +374,8 @@ public class GPXCreator extends JComponent {
         btnFileSave.setFocusable(false);
         btnFileSave.setIcon(new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/file-save.png")));
         String ctrlSave = "CTRL+S";
-        mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK), ctrlSave);
+        mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK), ctrlSave);
         mapPanel.getActionMap().put(ctrlSave, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -401,7 +396,8 @@ public class GPXCreator extends JComponent {
         btnRouteDelete.setFocusable(false);
         btnRouteDelete.setIcon(new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/route-delete.png")));
         String ctrlDelete = "CTRL+D";
-        mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_D, KeyEvent.CTRL_DOWN_MASK), ctrlDelete);
+        mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_D, KeyEvent.CTRL_DOWN_MASK), ctrlDelete);
         mapPanel.getActionMap().put(ctrlDelete, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -411,6 +407,7 @@ public class GPXCreator extends JComponent {
         toolBarMain.add(btnRouteDelete);
         
         toolBarMain.addSeparator();
+        
         /* ---------------------------------------- EDIT PROPERTIES BUTTON ----------------------------------------- */
         btnEditRouteProperties = new JButton("");
         btnEditRouteProperties.addMouseListener(new MouseAdapter() {
@@ -421,43 +418,17 @@ public class GPXCreator extends JComponent {
         });
         btnEditRouteProperties.setToolTipText("Edit route properties");
         btnEditRouteProperties.setFocusable(false);
-        btnEditRouteProperties.setIcon(new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/edit-route-properties.png")));
-        /*String ctrlEdit = "CTRL+E";
-        mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_E, KeyEvent.CTRL_DOWN_MASK), ctrlEdit);
-        mapPanel.getActionMap().put(ctrlEdit, new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                
-            }
-        });*/
+        btnEditRouteProperties.setIcon(new ImageIcon(
+                GPXCreator.class.getResource("/com/gpxcreator/icons/edit-route-properties.png")));
         toolBarMain.add(btnEditRouteProperties);
         
         /* ------------------------------------------- ADD POINTS BUTTON ------------------------------------------- */
         btnEditRouteAddPoints = new JToggleButton("");
-        /*btnEditRouteAddPoints.addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent ev) {
-                if(ev.getStateChange()==ItemEvent.SELECTED){
-                    // System.out.println("button is selected");
-                    addPointsListener = mapClickListener;
-                } else if(ev.getStateChange()==ItemEvent.DESELECTED){
-                    // System.out.println("button is not selected");
-                    addPointsListener = null;
-                }
-            }
-         });*/
         btnEditRouteAddPoints.setToolTipText("Add points");
         btnEditRouteAddPoints.setFocusable(false);
-        btnEditRouteAddPoints.setIcon(new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/edit-route-add-points.png")));
-        /*String ctrlAdd = "CTRL+A";
-        mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_DOWN_MASK), ctrlAdd);
-        mapPanel.getActionMap().put(ctrlAdd, new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                //deleteActiveRoute();
-            }
-        });*/
+        btnEditRouteAddPoints.setIcon(new ImageIcon(
+                GPXCreator.class.getResource("/com/gpxcreator/icons/edit-route-add-points.png")));
         toolBarMain.add(btnEditRouteAddPoints);
-        
         mapClickListener = new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -471,7 +442,7 @@ public class GPXCreator extends JComponent {
                     double lat = OsmMercator.YToLat(yStart + y, zoom);
                     double lon = OsmMercator.XToLon(xStart + x, zoom);
                     RoutePoint rtept = new RoutePoint(lat, lon);
-                    activeRoute.addRoutePoint(rtept);
+                    activeRoute.addRoutePoint(rtept, true);
                     mapPanel.repaint();
                     resetRoutePropsTable();
                 }
@@ -484,36 +455,74 @@ public class GPXCreator extends JComponent {
         btnEditRouteDelPoints.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
-                //deleteActiveRoute();
+                // TODO do things
             }
         });
         btnEditRouteDelPoints.setToolTipText("Delete points");
         btnEditRouteDelPoints.setFocusable(false);
-        btnEditRouteDelPoints.setIcon(new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/edit-route-delete-points.png")));
-        /*String ctrlAdd = "CTRL+A";
-        mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_A, KeyEvent.CTRL_DOWN_MASK), ctrlAdd);
-        mapPanel.getActionMap().put(ctrlAdd, new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                //deleteActiveRoute();
-            }
-        });*/
+        btnEditRouteDelPoints.setIcon(new ImageIcon(
+                GPXCreator.class.getResource("/com/gpxcreator/icons/edit-route-delete-points.png")));
         toolBarMain.add(btnEditRouteDelPoints);
         
-
-
-        // bogus event handler for quick ghetto debugging
-        /*mapPanel.addMouseListener(new MouseAdapter() {
+        /* --------------------------------------- CORRECT ELEVATION BUTTON ---------------------------------------- */
+        JButton correctElevation = new JButton("");
+        correctElevation.setToolTipText("Correct elevation");
+        correctElevation.setIcon(new ImageIcon(
+                GPXCreator.class.getResource("/com/gpxcreator/icons/correct-elevation.png")));
+        correctElevation.setFocusable(false);
+        correctElevation.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (activeRoute != null) {
+                    activeRoute.correctElevation();
+                    resetRoutePropsTable();
+                }
+            }
+        });
+        toolBarMain.add(correctElevation);
+        
+        /* ---------------------------------------- ELEVATION CHART BUTTON ----------------------------------------- */
+        JButton elevationChart = new JButton("");
+        elevationChart.setToolTipText("View elevation profile chart");
+        elevationChart.setIcon(new ImageIcon(
+                GPXCreator.class.getResource("/com/gpxcreator/icons/elevation-chart.png")));
+        elevationChart.setFocusable(false);
+        elevationChart.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (activeRoute != null) {
+                    BufferedImage image = (BufferedImage) activeRoute.getElevationChartGET();
+                    JLabel label = new JLabel(new ImageIcon(image));
+                    JFrame f = new JFrame("Elevation profile for \"" +
+                            activeRoute.getName() + "\" (elevation data and chart provided by MapQuest.com)");
+                    try {
+                        f.setIconImage(ImageIO.read(GPXCreator.class.getResourceAsStream(
+                                "/com/gpxcreator/icons/elevation-chart.png")));
+                    } catch (IOException e1) {
+                        e1.printStackTrace();
+                    }
+                    f.getContentPane().add(label);
+                    f.pack();
+                    f.setLocationRelativeTo(frame);
+                    f.setVisible(true);
+                }
+            }
+        });
+        toolBarMain.add(elevationChart);
+        
+        // button for quick easy debugging
+        /*JButton debug = new JButton("debug something");
+        debug.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                Sytem.out.println();
+                // do a thing
             }
-        });*/
+        });
+        toolBarMain.add(debug);*/
         
         /*java.util.Properties systemProperties = System.getProperties();
         systemProperties.setProperty("http.proxyHost", "proxy1.lmco.com");
         systemProperties.setProperty("http.proxyPort", "80");*/
-        
     }
     
     public void routeNew() {
@@ -555,6 +564,7 @@ public class GPXCreator extends JComponent {
             mapPanel.removeRoute(activeRoute);
             tableModelRoutes.removeRoute(activeRoute);
             this.activeRoute = null;
+            clearRoutePropsTable();
         }
     }
     
@@ -601,10 +611,14 @@ public class GPXCreator extends JComponent {
         }
         double lengthMiles = activeRoute.getLengthMiles();
         tableModelRouteProps.addRow(new Object[]{"length", String.format("%.2f mi", lengthMiles)});
-        tableModelRouteProps.addRow(new Object[]{"elevation (start)", String.format("%.0f ft", activeRoute.getEleStartFeet())});
-        tableModelRouteProps.addRow(new Object[]{"elevation (end)", String.format("%.0f ft", activeRoute.getEleEndFeet())});
-        tableModelRouteProps.addRow(new Object[]{"min elevation", String.format("%.0f ft", activeRoute.getEleMinFeet())});
-        tableModelRouteProps.addRow(new Object[]{"max elevation", String.format("%.0f ft", activeRoute.getEleMaxFeet())});
+        tableModelRouteProps.addRow(
+                new Object[]{"elevation (start)", String.format("%.0f ft", activeRoute.getEleStartFeet())});
+        tableModelRouteProps.addRow(
+                new Object[]{"elevation (end)", String.format("%.0f ft", activeRoute.getEleEndFeet())});
+        tableModelRouteProps.addRow(
+                new Object[]{"min elevation", String.format("%.0f ft", activeRoute.getEleMinFeet())});
+        tableModelRouteProps.addRow(
+                new Object[]{"max elevation", String.format("%.0f ft", activeRoute.getEleMaxFeet())});
         double grossRiseFeet = activeRoute.getGrossRiseFeet();
         double grossFallFeet = activeRoute.getGrossFallFeet();
         tableModelRouteProps.addRow(new Object[]{"gross rise", String.format("%.0f ft", grossRiseFeet)});
@@ -619,7 +633,8 @@ public class GPXCreator extends JComponent {
             tableModelRouteProps.addRow(new Object[]{"avg speed", ""});
         }
         if (activeRoute.getMaxSpeedMph() != 0) {
-            tableModelRouteProps.addRow(new Object[]{"max speed", String.format("%.1f mph", activeRoute.getMaxSpeedMph())});            
+            tableModelRouteProps.addRow(
+                    new Object[]{"max speed", String.format("%.1f mph", activeRoute.getMaxSpeedMph())});            
         } else {
             tableModelRouteProps.addRow(new Object[]{"max speed", ""});
         }
@@ -660,5 +675,9 @@ public class GPXCreator extends JComponent {
         } else {
             tableModelRouteProps.addRow(new Object[]{"avg fall speed", ""});
         }
+    }
+    
+    public void clearRoutePropsTable() {
+        tableModelRouteProps.setRowCount(0);
     }
 }
