@@ -31,7 +31,11 @@ public class RouteColorRenderer extends DefaultTableCellRenderer implements Icon
             boolean hasFocus, int row, int col) {
         Route route = (Route) value;
         this.color = route.getColor();
-        this.setBackground(Color.white);
+        if (route.isTableHighlight()) {
+            setBackground(new Color(164, 205, 255));
+        } else {
+            setBackground(Color.white);
+        }
         return this;
     }
 

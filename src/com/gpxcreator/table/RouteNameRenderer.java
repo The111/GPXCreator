@@ -23,14 +23,20 @@ public class RouteNameRenderer extends DefaultTableCellRenderer implements Table
         String routeName = route.getName();
         if (route.isActive()) {
             setFont(BOLD);
+            setToolTipText(null);
         } else {
             setFont(PLAIN);
+            setToolTipText("Make route active");
         }
         setText(routeName);
         setHorizontalAlignment(LEFT);
         setVerticalAlignment(CENTER);
         setBorder(null);
-        setBackground(Color.white);
+        if (route.isTableHighlight()) {
+            setBackground(new Color(164, 205, 255));
+        } else {
+            setBackground(Color.white);
+        }
         return this;
     }
 }

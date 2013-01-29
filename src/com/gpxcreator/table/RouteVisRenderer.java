@@ -35,13 +35,19 @@ public class RouteVisRenderer extends DefaultTableCellRenderer implements TableC
         Route route = (Route) value;
         if (route.isVisible()) {
             setIcon(visible);
+            setToolTipText("Hide route");
         } else {
             setIcon(invisible);
+            setToolTipText("Show route");
         }
         setHorizontalAlignment(CENTER);
         setVerticalAlignment(CENTER);
         setBorder(null);
-        setBackground(Color.white);
+        if (route.isTableHighlight()) {
+            setBackground(new Color(164, 205, 255));
+        } else {
+            setBackground(Color.white);
+        }
         return this;
     }
 }

@@ -81,6 +81,8 @@ public class Route {
     private long riseTime;
     private long fallTime;
     
+    private boolean tableHighlight;
+    
     /**
      * Creates an empty {@link #Route}.
      * 
@@ -280,7 +282,7 @@ public class Route {
         String charset = "UTF-8";
         String param1 = "xml"; 
         String param2 = xmlText;
-        String param3 = "m";
+        String param3 = "m"; // TODO remember that this parameter is being ignored by an bug with API and POST
         String param4 = "xml";
         String query = null;
         URLConnection connection = null;
@@ -344,8 +346,7 @@ public class Route {
         return ret;
     }
     
-    
-    
+    // TODO MapQuest Open Elevation API does not seem to accept all parameters for chart POST request
     public Image getElevationChartPOST() {
         String xmlText = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><elevation><latLngCollection>";
         RoutePoint rtept = getStart();
@@ -391,43 +392,47 @@ public class Route {
     }
     
     public Image getElevationChartGET() {
-        String latLngCollection = "";
-        RoutePoint rtept = getStart();
-        latLngCollection += String.format("%.6f", rtept.getLat()) + "," + String.format("%.6f", rtept.getLon());
-        int increment = (getNumPts() / 300) + 1;
-        for (int i = 1; i < routePoints.size(); i += increment) {
-            rtept = routePoints.get(i);
-            latLngCollection += "," + String.format(
-                    "%.6f", rtept.getLat()) + "," + String.format("%.6f", rtept.getLon());
-        }
-        String url = "http://open.mapquestapi.com/elevation/v1/chart";
-        String charset = "UTF-8";
-        String param2 = "f";
-        String param3 = latLngCollection;
-        String query = null;
-        URLConnection connection = null;
-        InputStream response = null;
-        try {
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            double width = screenSize.getWidth();
-            double height = screenSize.getHeight();
-            query = String.format("width=" + (int) (width/2) + "&height=" + (int) (height/2) +
-                            "&unit=%s&latLngCollection=%s",
-                    URLEncoder.encode(param2, charset),
-                    URLEncoder.encode(param3, charset));
-                    connection = new URL(url + "?" + query).openConnection();
-                    connection.setRequestProperty("Accept-Charset", charset);
-                    connection.setRequestProperty(
-                            "Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
-                    response = connection.getInputStream();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         BufferedImage img = null;
-        try {
-            img = ImageIO.read(response);
-        } catch (IOException e) {
-            e.printStackTrace();
+        int maxNumLatLonPairsToSend = 200; // limit to how big a GET request can be, depends on various factors
+        for ( ; img == null && maxNumLatLonPairsToSend >= 10; maxNumLatLonPairsToSend /= 2) {
+            String latLngCollection = "";
+            RoutePoint rtept = getStart();
+            latLngCollection += String.format("%.6f", rtept.getLat()) + "," + String.format("%.6f", rtept.getLon());
+            int increment = (getNumPts() / maxNumLatLonPairsToSend) + 1;
+            for (int i = 1; i < routePoints.size(); i += increment) {
+                rtept = routePoints.get(i);
+                latLngCollection += "," + String.format(
+                        "%.6f", rtept.getLat()) + "," + String.format("%.6f", rtept.getLon());
+            }
+            String url = "http://open.mapquestapi.com/elevation/v1/chart";
+            String charset = "UTF-8";
+            String param2 = "f";
+            String param3 = latLngCollection;
+            String query = null;
+            URLConnection connection = null;
+            InputStream response = null;
+            try {
+                Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+                double width = screenSize.getWidth();
+                double height = screenSize.getHeight();
+                query = String.format("width=" + (int) (width/2) + "&height=" + (int) (height/2) +
+                        "&unit=%s&latLngCollection=%s",
+                URLEncoder.encode(param2, charset),
+                URLEncoder.encode(param3, charset));
+                connection = new URL(url + "?" + query).openConnection();
+                connection.setRequestProperty("Accept-Charset", charset);
+                connection.setRequestProperty(
+                        "Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
+                response = connection.getInputStream();
+            } catch (IOException e) {
+                e.printStackTrace();
+                continue;
+            }
+            try {
+                img = ImageIO.read(response);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return img;
     }
@@ -676,6 +681,10 @@ public class Route {
         RoutePoint prev;
         Date startTime = getEnd().getTime();
         Date endTime = getEnd().getTime();
+        /*int increment = (getNumPts() / 100) + 1;
+        RoutePoint rtept;
+        for (int i = 0; i < routePoints.size(); i += increment) {
+            rtept = routePoints.get(i);*/
         for (RoutePoint rtept : routePoints) {
             prev = curr;
             curr = rtept;
@@ -800,5 +809,13 @@ public class Route {
         maxLat = Math.max(maxLat, lat);
         minLon = Math.min(minLon, lon);
         maxLon = Math.max(maxLon, lon);
+    }
+
+    public boolean isTableHighlight() {
+        return tableHighlight;
+    }
+
+    public void setTableHighlight(boolean tableHighlight) {
+        this.tableHighlight = tableHighlight;
     }
 }

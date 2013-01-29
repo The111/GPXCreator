@@ -71,6 +71,7 @@ public class RouteNameEditor extends AbstractCellEditor implements TableCellEdit
 
     @Override
     public void mouseExited(MouseEvent e) {
+        this.fireEditingCanceled(); // TODO extend this magic
     }
     
     private static class RouteNameEditorComponent extends JLabel {

@@ -4,26 +4,37 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.event.MouseEvent;
 import java.awt.geom.GeneralPath;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.imageio.ImageIO;
 
 import org.openstreetmap.gui.jmapviewer.DefaultMapController;
 import org.openstreetmap.gui.jmapviewer.JMapViewer;
 import org.openstreetmap.gui.jmapviewer.MemoryTileCache;
 import org.openstreetmap.gui.jmapviewer.OsmMercator;
+import org.openstreetmap.gui.jmapviewer.tilesources.OsmTileSource;
+
+import com.gpxcreator.GPXCreator;
 
 @SuppressWarnings("serial")
 public class GPXPanel extends JMapViewer {
     
     private List<Route> routes;
+    private Image imgRteStart;
+    private Image imgRtePt;
+    private Image imgRteEnd;
 
     public GPXPanel() {
         super(new MemoryTileCache(), 16);
+        this.setTileSource(new OsmTileSource.Mapnik());
         DefaultMapController mapController = new DefaultMapController(this);
         mapController.setDoubleClickZoomEnabled(false);
         mapController.setMovementEnabled(true);
@@ -32,6 +43,13 @@ public class GPXPanel extends JMapViewer {
         this.setScrollWrapEnabled(false); // TODO fix wrap bugs for routes (wrap not implemented at all for routePath)
         this.setZoomButtonStyle(ZOOM_BUTTON_STYLE.VERTICAL);
         routes = new ArrayList<Route>();
+        try {
+            imgRteStart = ImageIO.read(GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/route-start.png"));
+            imgRtePt = ImageIO.read(GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/route-point.png"));
+            imgRteEnd = ImageIO.read(GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/route-end.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
     
     public void addRoute(Route route) {
@@ -49,10 +67,28 @@ public class GPXPanel extends JMapViewer {
     }
     
     private void paintRoutes(Graphics g, List<Route> routes) {
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         for (Route route : routes) {
-            g.setColor(route.getColor());
-            if ((route.getNumPts()) >= 2 && route.isVisible()) {
-                paintRoute(g, route);
+            if (route.isVisible()) {
+                g.setColor(route.getColor());
+                if (route.getNumPts() >= 2) {
+                    paintRoute(g, route);
+                }
+                if (route.getNumPts() >= 2) {
+                    RoutePoint rteptEnd = route.getEnd(); 
+                    Point end = getMapPosition(rteptEnd.getLat(), rteptEnd.getLon(), false);
+                    g.setColor(Color.BLACK);
+                    //g.fillOval(end.x - 5, end.y - 5, 11, 11);
+                    g.drawImage(imgRteEnd, end.x - 8, end.y - 28, null);
+                }
+                if (route.getNumPts() >= 1) {
+                    RoutePoint rteptStart = route.getStart(); 
+                    Point start = getMapPosition(rteptStart.getLat(), rteptStart.getLon(), false);
+                    g.setColor(Color.BLACK);
+                    //g.fillOval(start.x - 5, start.y - 5, 11, 11);
+                    g.drawImage(imgRteStart, start.x - 9, start.y - 28, null);
+                }
             }
         }
     }
@@ -93,8 +129,16 @@ public class GPXPanel extends JMapViewer {
             rtept = routePoints.get(i);
             point = getMapPosition(rtept.getLat(), rtept.getLon(), false);
             routePath.lineTo(point.x, point.y);
+            g.drawImage(imgRtePt, point.x - 9, point.y - 28, null);
         }
         g2d.draw(routePath);
+        
+        // draw points
+        for (int i = 1; i < routePoints.size(); i++) {
+            rtept = routePoints.get(i);
+            point = getMapPosition(rtept.getLat(), rtept.getLon(), false);
+            g.drawImage(imgRtePt, point.x - 9, point.y - 28, null);
+        }
         
         g2d.setStroke(saveStroke);
     }
@@ -198,5 +242,9 @@ public class GPXPanel extends JMapViewer {
         } else {
             setDisplayPositionByLatLon(36, -98, 4);
         }
+    }
+
+    public List<Route> getRoutes() {
+        return routes;
     }    
 }

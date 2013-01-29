@@ -12,9 +12,12 @@ import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -253,6 +256,33 @@ public class GPXCreator extends JComponent {
                 mapPanel.repaint(); // update route visibility on map
             }
         });
+        tableRoutes.addMouseMotionListener(new MouseMotionListener() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                int row = tableRoutes.rowAtPoint(new Point(e.getX(), e.getY()));
+                int column = tableRoutes.columnAtPoint(new Point(e.getX(), e.getY()));
+                for (Route rte : mapPanel.getRoutes()) {
+                    rte.setTableHighlight(false);
+                }
+                if (row != -1) {
+                    Route route = (Route) tableRoutes.getValueAt(row, column);
+                    route.setTableHighlight(true);
+                }
+                tableModelRoutes.fireTableDataChanged();
+            }
+            @Override
+            public void mouseDragged(MouseEvent e) {
+            }
+        });
+        tableRoutes.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseExited(MouseEvent e) {
+                for (Route rte : mapPanel.getRoutes()) {
+                    rte.setTableHighlight(false);
+                }
+                tableModelRoutes.fireTableDataChanged();
+            }
+        });
         
         /* ----------------------------------------- ROUTE TABLE SCROLLPANE ---------------------------------------- */
         scrollPaneRoutes = new JScrollPane(tableRoutes);
@@ -460,20 +490,34 @@ public class GPXCreator extends JComponent {
             }
         };
         mapPanel.addMouseListener(mapClickListener);
+        btnEditRouteAddPoints.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    if (btnEditRouteDelPoints.isSelected()) {
+                        btnEditRouteDelPoints.setSelected(false);
+                    }
+                }
+            }
+        });
         
         /* ----------------------------------------- DELETE POINTS BUTTON ------------------------------------------ */
         btnEditRouteDelPoints = new JToggleButton("");
-        btnEditRouteDelPoints.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                // TODO do things
-            }
-        });
         btnEditRouteDelPoints.setToolTipText("Delete points");
         btnEditRouteDelPoints.setFocusable(false);
         btnEditRouteDelPoints.setIcon(new ImageIcon(
                 GPXCreator.class.getResource("/com/gpxcreator/icons/edit-route-delete-points.png")));
         toolBarMain.add(btnEditRouteDelPoints);
+        btnEditRouteDelPoints.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    if (btnEditRouteAddPoints.isSelected()) {
+                        btnEditRouteAddPoints.setSelected(false);
+                    }
+                }
+            }
+        });
         
         /* --------------------------------------- CORRECT ELEVATION BUTTON ---------------------------------------- */
         btnCorrectEle = new JButton("");
