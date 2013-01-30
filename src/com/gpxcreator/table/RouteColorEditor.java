@@ -11,6 +11,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
+import java.io.InputStream;
 import java.util.EventObject;
 
 import javax.imageio.ImageIO;
@@ -38,16 +39,14 @@ public class RouteColorEditor extends AbstractCellEditor implements TableCellEdi
         editorComponent.addMouseListener(this);
         colorChooser = new JColorChooser();
         dialog = JColorChooser.createDialog(editorComponent, "Choose a Color", true, colorChooser, this, null);
-        /*dialog.setIconImage(Toolkit.getDefaultToolkit().getImage(GPXCreator.class.getResource(
-                "/com/gpxcreator/icons/color-palette.png")));*/
         BufferedImage img = null;
+        InputStream in = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/color-palette.png");
         try {
-            img = ImageIO.read(GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/color-palette.png"));
+            img = ImageIO.read(in);
         } catch (Exception e) {
             e.printStackTrace();
         }
         dialog.setIconImage(img);
-        
     }
     
     @Override

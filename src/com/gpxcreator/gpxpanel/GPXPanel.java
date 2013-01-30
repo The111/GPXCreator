@@ -11,6 +11,7 @@ import java.awt.Stroke;
 import java.awt.event.MouseEvent;
 import java.awt.geom.GeneralPath;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -43,12 +44,29 @@ public class GPXPanel extends JMapViewer {
         this.setScrollWrapEnabled(false); // TODO fix wrap bugs for routes (wrap not implemented at all for routePath)
         this.setZoomButtonStyle(ZOOM_BUTTON_STYLE.VERTICAL);
         routes = new ArrayList<Route>();
-        try {
-            imgRteStart = ImageIO.read(GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/route-start.png"));
-            imgRtePt = ImageIO.read(GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/route-point.png"));
-            imgRteEnd = ImageIO.read(GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/route-end.png"));
-        } catch (IOException e) {
-            e.printStackTrace();
+        InputStream in1 = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/route-start.png");
+        if (in1 != null) {
+            try {
+                imgRteStart = ImageIO.read(in1);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        InputStream in2 = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/route-point.png");
+        if (in2 != null) {
+            try {
+                imgRtePt = ImageIO.read(in2);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        InputStream in3 = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/route-end.png");
+        if (in3 != null) {
+            try {
+                imgRteEnd = ImageIO.read(in3);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
     

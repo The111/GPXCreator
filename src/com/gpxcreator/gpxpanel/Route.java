@@ -383,10 +383,12 @@ public class Route {
             e.printStackTrace();
         }
         BufferedImage img = null;
-        try {
-            img = ImageIO.read(response);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (response != null) {
+            try {
+                img = ImageIO.read(response);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return img;
     }
@@ -428,10 +430,12 @@ public class Route {
                 e.printStackTrace();
                 continue;
             }
-            try {
-                img = ImageIO.read(response);
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (response != null) {
+                try {
+                    img = ImageIO.read(response);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
         return img;

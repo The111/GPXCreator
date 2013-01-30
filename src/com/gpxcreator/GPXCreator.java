@@ -21,6 +21,7 @@ import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -148,12 +149,16 @@ public class GPXCreator extends JComponent {
 
         /* ---------------------------------------------- MAIN FRAME ----------------------------------------------- */
         frame = new JFrame("GPX Creator");
-        try {
-            frame.setIconImage(ImageIO.read(GPXCreator.class.getResourceAsStream(
-                    "/com/gpxcreator/icons/gpx-creator.png")));
-        } catch (IOException e) {
-            e.printStackTrace();
+        InputStream in = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/gpx-creator.png");
+        BufferedImage bufImg = null;
+        if (in != null) {
+            try {
+                bufImg = ImageIO.read(in);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+        frame.setIconImage(bufImg);
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         double width = screenSize.getWidth();
         double height = screenSize.getHeight();
@@ -550,11 +555,13 @@ public class GPXCreator extends JComponent {
                     JLabel label = new JLabel(new ImageIcon(image));
                     JFrame f = new JFrame("Elevation profile for \"" +
                             activeRoute.getName() + "\" (elevation data and chart provided by MapQuest.com)");
-                    try {
-                        f.setIconImage(ImageIO.read(GPXCreator.class.getResourceAsStream(
-                                "/com/gpxcreator/icons/elevation-chart.png")));
-                    } catch (IOException e1) {
-                        e1.printStackTrace();
+                    InputStream in = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/elevation-chart.png");
+                    if (in != null) {
+                        try {
+                            f.setIconImage(ImageIO.read(in));
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
+                        }
                     }
                     f.getContentPane().add(label);
                     f.pack();
