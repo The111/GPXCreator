@@ -1,5 +1,6 @@
 package com.gpxcreator;
 
+import java.awt.AWTEvent;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -10,10 +11,12 @@ import java.awt.Font;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
+import java.awt.event.AWTEventListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -41,6 +44,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
 import javax.swing.KeyStroke;
@@ -63,6 +67,7 @@ import org.openstreetmap.gui.jmapviewer.tilesources.BingAerialTileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOpenAerialTileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOsmTileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.OsmTileSource;
+import org.openstreetmap.gui.jmapviewer.tilesources.TemplatedTMSTileSource;
 
 import com.gpxcreator.gpxpanel.GPXPanel;
 import com.gpxcreator.gpxpanel.Route;
@@ -92,8 +97,20 @@ public class GPXCreator extends JComponent {
             private JButton btnEditRouteProperties;
             private JToggleButton btnEditRouteAddPoints;
             private JToggleButton btnEditRouteDelPoints;
+            private JButton btnEleChartOld;
             private JButton btnEleChart;
             private JButton btnCorrectEle;
+            
+            
+            //private JToggleButton btnLatLonSearch;
+            private JLabel lblLon;
+            private JTextField textFieldLat;
+            private JLabel lblLat;
+            private JTextField textFieldLon;
+            private JToggleButton btnLatLonFocus;
+            
+            
+            
             private JComboBox<String> comboBoxTileSource;
         private JSplitPane splitPaneMain;   // CENTER
             private JSplitPane splitPaneSidebar;    // LEFT
@@ -112,7 +129,9 @@ public class GPXCreator extends JComponent {
                         private JTable tableRouteProps;
             private GPXPanel mapPanel;              // RIGHT
             private Route activeRoute;
-            private MouseAdapter mapClickListener;
+            private Cursor mapCursor;
+            
+    //private AttributionSupport attribution = new AttributionSupport();
 
     /**
      * Launch the application.
@@ -128,6 +147,7 @@ public class GPXCreator extends JComponent {
                 try {
                     GPXCreator window = new GPXCreator();
                     window.frame.setVisible(true);
+                    window.frame.requestFocusInWindow();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -180,6 +200,29 @@ public class GPXCreator extends JComponent {
             e.printStackTrace();
         }
         splitPaneMain.setRightComponent(mapPanel);
+        
+        mapPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getButton() == MouseEvent.BUTTON1) {
+                    mapPanel.getAttribution().handleAttribution(e.getPoint(), true);
+                }
+            }
+        });
+        
+        mapCursor = new Cursor(Cursor.DEFAULT_CURSOR);
+        mapPanel.setCursor(mapCursor);
+        mapPanel.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                boolean cursorHand = mapPanel.getAttribution().handleAttributionCursor(e.getPoint());
+                if (cursorHand) {
+                    mapPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                } else {
+                    mapPanel.setCursor(mapCursor);
+                }
+            }
+        });
         
         /* ------------------------------------------ SIDEBAR SPLIT PANE ------------------------------------------- */
         splitPaneSidebar = new JSplitPane();
@@ -475,7 +518,7 @@ public class GPXCreator extends JComponent {
         btnEditRouteAddPoints.setIcon(new ImageIcon(
                 GPXCreator.class.getResource("/com/gpxcreator/icons/edit-route-add-points.png")));
         toolBarMain.add(btnEditRouteAddPoints);
-        mapClickListener = new MouseAdapter() {
+        mapPanel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (btnEditRouteAddPoints.isSelected() && activeRoute != null) {
@@ -493,8 +536,7 @@ public class GPXCreator extends JComponent {
                     resetRoutePropsTable();
                 }
             }
-        };
-        mapPanel.addMouseListener(mapClickListener);
+        });
         btnEditRouteAddPoints.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
@@ -541,21 +583,23 @@ public class GPXCreator extends JComponent {
         });
         toolBarMain.add(btnCorrectEle);
         
+        /* ------------------------------------------------- OLD --------------------------------------------------- */
         /* ---------------------------------------- ELEVATION CHART BUTTON ----------------------------------------- */
-        btnEleChart = new JButton("");
-        btnEleChart.setToolTipText("View elevation profile chart");
-        btnEleChart.setIcon(new ImageIcon(
-                GPXCreator.class.getResource("/com/gpxcreator/icons/elevation-chart.png")));
-        btnEleChart.setFocusable(false);
-        btnEleChart.addMouseListener(new MouseAdapter() {
+        btnEleChartOld = new JButton("");
+        btnEleChartOld.setToolTipText("View elevation profile chart");
+        btnEleChartOld.setIcon(new ImageIcon(
+                GPXCreator.class.getResource("/com/gpxcreator/icons/elevation-chart-old.png")));
+        btnEleChartOld.setFocusable(false);
+        btnEleChartOld.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (activeRoute != null) {
-                    BufferedImage image = (BufferedImage) activeRoute.getElevationChartGET();
+                    BufferedImage image = (BufferedImage) activeRoute.getElevationChart();
                     JLabel label = new JLabel(new ImageIcon(image));
                     JFrame f = new JFrame("Elevation profile for \"" +
                             activeRoute.getName() + "\" (elevation data and chart provided by MapQuest.com)");
-                    InputStream in = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/elevation-chart.png");
+                    InputStream in = GPXCreator.class.getResourceAsStream(
+                            "/com/gpxcreator/icons/elevation-chart-old.png");
                     if (in != null) {
                         try {
                             f.setIconImage(ImageIO.read(in));
@@ -570,22 +614,82 @@ public class GPXCreator extends JComponent {
                 }
             }
         });
+        //toolBarMain.add(btnEleChartOld);
+        
+        /* ---------------------------------------- ELEVATION CHART BUTTON ----------------------------------------- */
+        btnEleChart = new JButton("");
+        btnEleChart.setToolTipText("View elevation profile");
+        btnEleChart.setIcon(new ImageIcon(
+                GPXCreator.class.getResource("/com/gpxcreator/icons/elevation-chart.png")));
+        btnEleChart.setFocusable(false);
+        btnEleChart.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (activeRoute != null) {
+                    JFrame f = new ElevationChart(
+                            "Elevation profile", activeRoute);
+                    InputStream in = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/elevation-chart.png");
+                    if (in != null) {
+                        try {
+                            f.setIconImage(ImageIO.read(in));
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
+                        }
+                    }
+                    f.setSize(frame.getWidth() - 150, frame.getHeight() - 100);
+                    f.setLocationRelativeTo(frame);
+                    f.setVisible(true);
+                }
+            }
+        });
         toolBarMain.add(btnEleChart);
         
-        toolBarMain.add(Box.createHorizontalGlue());
+
+        
+        
         
         /* ----------------------------------------- TILE SOURCE SELECTOR ------------------------------------------ */
+        toolBarMain.add(Box.createHorizontalGlue());
         final TileSource openStreetMap = new OsmTileSource.Mapnik();
         final TileSource openCycleMap = new OsmTileSource.CycleMap(); 
         final TileSource bingAerial = new BingAerialTileSource();
         final TileSource mapQuestOsm = new MapQuestOsmTileSource();
         final TileSource mapQuestOpenAerial = new MapQuestOpenAerialTileSource();
+        final TileSource googleMaps = new TemplatedTMSTileSource(
+                "Google Maps",
+                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=m&x={x}&y={y}&z={zoom}", 22);
+        final TileSource googleSat = new TemplatedTMSTileSource(
+                "Google Satellite",
+                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=s&x={x}&y={y}&z={zoom}", 21);
+        final TileSource googleSatMap = new TemplatedTMSTileSource(
+                "Google Satellite + Labels",
+                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=y&x={x}&y={y}&z={zoom}", 21);
+        final TileSource googleTerrain = new TemplatedTMSTileSource(
+                "Google Terrain",
+                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=p&x={x}&y={y}&z={zoom}", 15);
+        final TileSource esriTopoUSA = new TemplatedTMSTileSource(
+                "Esri Topo USA",
+                "http://server.arcgisonline.com/ArcGIS/rest/services/" +
+                "USA_Topo_Maps/MapServer/tile/{zoom}/{y}/{x}.jpg", 15);
+        final TileSource esriTopoWorld = new TemplatedTMSTileSource(
+                "Esri Topo World",
+                "http://server.arcgisonline.com/ArcGIS/rest/services/" +
+                "World_Topo_Map/MapServer/tile/{zoom}/{y}/{x}.jpg", 19);
+        
         comboBoxTileSource = new JComboBox<String>();
+        comboBoxTileSource.setMaximumRowCount(18);
         comboBoxTileSource.addItem("OpenStreetMap");
         comboBoxTileSource.addItem("OpenCycleMap");
         comboBoxTileSource.addItem("Bing Aerial");
         comboBoxTileSource.addItem("MapQuest-OSM");
         comboBoxTileSource.addItem("MapQuest Open Aerial");
+        comboBoxTileSource.addItem("Google Maps");
+        comboBoxTileSource.addItem("Google Satellite");
+        comboBoxTileSource.addItem("Google Satellite + Labels");
+        comboBoxTileSource.addItem("Google Terrain");
+        comboBoxTileSource.addItem("Esri Topo USA");
+        comboBoxTileSource.addItem("Esri Topo World");
+        
         comboBoxTileSource.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -606,15 +710,188 @@ public class GPXCreator extends JComponent {
                     case "MapQuest Open Aerial":
                         mapPanel.setTileSource(mapQuestOpenAerial);
                         break;
+                    case "Google Maps":
+                        mapPanel.setTileSource(googleMaps);
+                        break;
+                    case "Google Satellite":
+                        mapPanel.setTileSource(googleSat);
+                        break;
+                    case "Google Satellite + Labels":
+                        mapPanel.setTileSource(googleSatMap);
+                        break;
+                    case "Google Terrain":
+                        mapPanel.setTileSource(googleTerrain);
+                        break;
+                    case "Esri Topo USA":
+                        mapPanel.setTileSource(esriTopoUSA);
+                        break;
+                    case "Esri Topo World":
+                        mapPanel.setTileSource(esriTopoWorld);
+                        break;
                 }
             }
         });
+        
         comboBoxTileSource.setFocusable(false);
-        comboBoxTileSource.setPreferredSize(new Dimension(150, 22));
-        comboBoxTileSource.setMinimumSize(new Dimension(50, 22));
+        comboBoxTileSource.setPreferredSize(new Dimension(150, 24));
+        comboBoxTileSource.setMinimumSize(new Dimension(50, 24));
         comboBoxTileSource.setAlignmentX(Component.RIGHT_ALIGNMENT);
         comboBoxTileSource.setMaximumSize(new Dimension(20, 24));
         toolBarMain.add(comboBoxTileSource);
+        
+        /* ----------------------------------------- LAT/LON INPUT/SEEKER ------------------------------------------ */
+        toolBarMain.addSeparator();
+        
+        lblLat = new JLabel(" Lat ");
+        lblLat.setFont(new Font("Tahoma", Font.PLAIN, 11));
+        toolBarMain.add(lblLat);
+        
+        textFieldLat = new JTextField();
+        textFieldLat.setPreferredSize(new Dimension(80, 24));
+        textFieldLat.setMinimumSize(new Dimension(25, 24));
+        textFieldLat.setMaximumSize(new Dimension(80, 24));
+        textFieldLat.setColumns(9);
+        textFieldLat.setFocusable(false);
+        textFieldLat.setFocusTraversalKeysEnabled(false);
+        textFieldLat.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_TAB) {
+                    textFieldLat.setFocusable(false);
+                    textFieldLon.setFocusable(true);
+                    textFieldLon.requestFocusInWindow();
+                } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    btnLatLonFocus.setSelected(false);
+                    btnLatLonFocus.setSelected(true);
+                } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    btnLatLonFocus.setSelected(false);
+                }
+            }
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (btnLatLonFocus.isSelected()) {
+                    btnLatLonFocus.setSelected(false);
+                    btnLatLonFocus.setSelected(true);
+                }
+            }
+        });
+        toolBarMain.add(textFieldLat);
+        
+        lblLon = new JLabel(" Lon ");
+        lblLon.setFont(new Font("Tahoma", Font.PLAIN, 11));
+        toolBarMain.add(lblLon);
+        
+        textFieldLon = new JTextField();
+        textFieldLon.setPreferredSize(new Dimension(80, 24));
+        textFieldLon.setMinimumSize(new Dimension(25, 24));
+        textFieldLon.setMaximumSize(new Dimension(80, 24));
+        textFieldLon.setColumns(9);
+        textFieldLon.setFocusable(false);
+        textFieldLon.setFocusTraversalKeysEnabled(false);
+        textFieldLon.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_TAB) {
+                    textFieldLat.setFocusable(true);
+                    textFieldLon.setFocusable(false);
+                    textFieldLat.requestFocusInWindow();
+                } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    btnLatLonFocus.setSelected(false);
+                    btnLatLonFocus.setSelected(true);
+                } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    btnLatLonFocus.setSelected(false);
+                }
+            }
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (btnLatLonFocus.isSelected()) {
+                    btnLatLonFocus.setSelected(false);
+                    btnLatLonFocus.setSelected(true);
+                }
+            }
+        });
+        toolBarMain.add(textFieldLon);
+        
+        long eventMask = AWTEvent.MOUSE_EVENT_MASK;  
+        Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {  
+            public void eventDispatched(AWTEvent e) {
+                if (e.getID() == MouseEvent.MOUSE_PRESSED) {
+                    if (e.getSource() == (Object) textFieldLat) {
+                        textFieldLat.setFocusable(true);
+                    } else {
+                        textFieldLat.setFocusable(false);
+                    }
+                    if (e.getSource() == (Object) textFieldLon) {
+                        textFieldLon.setFocusable(true);
+                    } else {
+                        textFieldLon.setFocusable(false);
+                    }
+                }
+            }
+        }, eventMask);
+        
+        btnLatLonFocus = new JToggleButton("");
+        btnLatLonFocus.setToolTipText("Focus on latitude/longitude");
+        btnLatLonFocus.setIcon(new ImageIcon(
+                GPXCreator.class.getResource("/com/gpxcreator/icons/crosshair.png")));
+        btnLatLonFocus.setFocusable(false);
+        btnLatLonFocus.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    mapCursor = new Cursor(Cursor.CROSSHAIR_CURSOR);
+                    String latString = textFieldLat.getText();
+                    String lonString = textFieldLon.getText();
+                    try {
+                        double latDouble = Double.parseDouble(latString);
+                        double lonDouble = Double.parseDouble(lonString);
+                        mapPanel.setShowCrosshair(true);
+                        mapPanel.setCrosshairLat(latDouble);
+                        mapPanel.setCrosshairLon(lonDouble);
+                        Point p = new Point(mapPanel.getWidth() / 2, mapPanel.getHeight() / 2); 
+                        mapPanel.setDisplayPositionByLatLon(p, latDouble, lonDouble, mapPanel.getZoom());
+                    } catch (Exception e1) {
+                        // nothing
+                    }
+                    mapPanel.repaint();
+                } else if (e.getStateChange() == ItemEvent.DESELECTED) {
+                    mapCursor = new Cursor(Cursor.DEFAULT_CURSOR);
+                    mapPanel.setShowCrosshair(false);
+                    mapPanel.repaint();
+                }
+            }
+        });
+        
+        mapPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (btnLatLonFocus.isSelected()) {
+                    int zoom = mapPanel.getZoom();
+                    int x = e.getX();
+                    int y = e.getY();
+                    Point mapCenter = mapPanel.getCenter();
+                    int xStart = mapCenter.x - mapPanel.getWidth() / 2;
+                    int yStart = mapCenter.y - mapPanel.getHeight() / 2;
+                    double lat = OsmMercator.YToLat(yStart + y, zoom);
+                    double lon = OsmMercator.XToLon(xStart + x, zoom);
+                    textFieldLat.setText(String.format("%.6f", lat));
+                    textFieldLon.setText(String.format("%.6f", lon));
+                    mapPanel.setShowCrosshair(true);
+                    mapPanel.setCrosshairLat(lat);
+                    mapPanel.setCrosshairLon(lon);
+                    mapPanel.repaint();
+                }
+            }
+        });
+        
+        Component horizontalGlue = Box.createHorizontalGlue();
+        horizontalGlue.setPreferredSize(new Dimension(2, 0));
+        horizontalGlue.setMinimumSize(new Dimension(2, 0));
+        horizontalGlue.setMaximumSize(new Dimension(2, 0));
+        toolBarMain.add(horizontalGlue);
+        toolBarMain.add(btnLatLonFocus);
+        
+        /* --------------------------------------------------------------------------------------------------------- */
         
         // button for quick easy debugging
         /*JButton debug = new JButton("debug something");
@@ -626,9 +903,9 @@ public class GPXCreator extends JComponent {
         });
         toolBarMain.add(debug);*/
         
-        /*java.util.Properties systemProperties = System.getProperties();
+        java.util.Properties systemProperties = System.getProperties();
         systemProperties.setProperty("http.proxyHost", "proxy1.lmco.com");
-        systemProperties.setProperty("http.proxyPort", "80");*/
+        systemProperties.setProperty("http.proxyPort", "80");
     }
     
     public void routeNew() {
@@ -681,6 +958,7 @@ public class GPXCreator extends JComponent {
     }
     
     public void setActiveRoute(Route route) {
+        btnLatLonFocus.setSelected(false);
         if (activeRoute != null) {
             activeRoute.setActive(false);
         }

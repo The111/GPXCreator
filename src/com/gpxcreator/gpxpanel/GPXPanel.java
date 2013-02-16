@@ -17,6 +17,7 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import org.openstreetmap.gui.jmapviewer.Coordinate;
 import org.openstreetmap.gui.jmapviewer.DefaultMapController;
 import org.openstreetmap.gui.jmapviewer.JMapViewer;
 import org.openstreetmap.gui.jmapviewer.MemoryTileCache;
@@ -32,6 +33,10 @@ public class GPXPanel extends JMapViewer {
     private Image imgRteStart;
     private Image imgRtePt;
     private Image imgRteEnd;
+    private Image imgCrosshair;
+    private double crosshairLat;
+    private double crosshairLon;
+    private boolean showCrosshair;
 
     public GPXPanel() {
         super(new MemoryTileCache(), 16);
@@ -68,6 +73,14 @@ public class GPXPanel extends JMapViewer {
                 e.printStackTrace();
             }
         }
+        InputStream in4 = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/crosshair-map.png");
+        if (in4 != null) {
+            try {
+                imgCrosshair = ImageIO.read(in4);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
     
     public void addRoute(Route route) {
@@ -78,10 +91,31 @@ public class GPXPanel extends JMapViewer {
         routes.remove(route);
     }
     
+    /*@Override
+    public void moveMap(int x, int y) {
+        if (!lockMovement) {
+            super.moveMap(x, y);
+        }
+    }*/
+    
+    /*@Override
+    public void setZoom(int zoom, Point mapPoint) {
+        if (lockMovement) {
+            super.setZoom(zoom, new Point(getWidth() / 2, getHeight() / 2));
+        } else {
+            super.setZoom(zoom, mapPoint);
+        }
+    }*/
+    
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         paintRoutes(g, routes);
+        if (showCrosshair) {
+            Point p = this.getMapPosition(new Coordinate(crosshairLat, crosshairLon), false);
+            int offset = imgCrosshair.getWidth(null) / 2;
+            g.drawImage(imgCrosshair, p.x - offset, p.y - offset, null);
+        }
     }
     
     private void paintRoutes(Graphics g, List<Route> routes) {
@@ -147,16 +181,15 @@ public class GPXPanel extends JMapViewer {
             rtept = routePoints.get(i);
             point = getMapPosition(rtept.getLat(), rtept.getLon(), false);
             routePath.lineTo(point.x, point.y);
-            g.drawImage(imgRtePt, point.x - 9, point.y - 28, null);
         }
         g2d.draw(routePath);
         
         // draw points
-        for (int i = 1; i < routePoints.size(); i++) {
+        /*for (int i = 1; i < routePoints.size(); i++) {
             rtept = routePoints.get(i);
             point = getMapPosition(rtept.getLat(), rtept.getLon(), false);
             g.drawImage(imgRtePt, point.x - 9, point.y - 28, null);
-        }
+        }*/
         
         g2d.setStroke(saveStroke);
     }
@@ -264,5 +297,17 @@ public class GPXPanel extends JMapViewer {
 
     public List<Route> getRoutes() {
         return routes;
-    }    
+    }
+
+    public void setCrosshairLat(double crosshairLat) {
+        this.crosshairLat = crosshairLat;
+    }
+
+    public void setCrosshairLon(double crosshairLon) {
+        this.crosshairLon = crosshairLon;
+    }
+
+    public void setShowCrosshair(boolean showCrosshair) {
+        this.showCrosshair = showCrosshair;
+    }
 }

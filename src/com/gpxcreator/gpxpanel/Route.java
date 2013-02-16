@@ -246,7 +246,7 @@ public class Route {
                 query = String.format("latLngCollection=%s&unit=%s",
                         URLEncoder.encode(param1, charset),
                         URLEncoder.encode(param2, charset));
-                connection = new URL(url + "?" + query).openConnection(); // TODO don't open new connection each time?
+                connection = new URL(url + "?" + query).openConnection();
                 connection.setRequestProperty("Accept-Charset", charset);
                 response = connection.getInputStream();
                 br = new BufferedReader((Reader) new InputStreamReader(response, "UTF-8"));
@@ -261,64 +261,14 @@ public class Route {
             int heightIndex = responseStr.indexOf("height");
             String height = "";
             for (int i = heightIndex + 8;
-                    Character.isDigit(responseStr.charAt(i)) || responseStr.charAt(i) == '.'; i++) {
+                    Character.isDigit(responseStr.charAt(i)) || responseStr.charAt(i) == '.'
+                    || responseStr.charAt(i) == '-';
+                    i++) {
                 height = height + responseStr.charAt(i);
             }
             wpt.setEle(Double.parseDouble(height));
         }
         addRoutePoint(wpt);
-    }
-    
-    public void correctElevation() {
-        String xmlText = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><elevation><latLngCollection>";
-        RoutePoint rtept = getStart();
-        xmlText += rtept.getLat() + "," + rtept.getLon();
-        for (int i = 1; i < routePoints.size(); i++) {
-            rtept = routePoints.get(i);
-            xmlText += "," + rtept.getLat() + "," + rtept.getLon();
-        }
-        xmlText += "</latLngCollection></elevation>";
-        String url = "http://open.mapquestapi.com/elevation/v1/profile";
-        String charset = "UTF-8";
-        String param1 = "xml"; 
-        String param2 = xmlText;
-        String param3 = "m"; // TODO remember that this parameter is being ignored by an bug with API and POST
-        String param4 = "xml";
-        String query = null;
-        URLConnection connection = null;
-        OutputStream output = null;
-        InputStream response = null;
-        BufferedReader br = null;
-        StringBuilder builder = new StringBuilder();
-        try {
-            query = String.format("inFormat=%s&xml=%s&unit=%s&outFormat=%s",
-                    URLEncoder.encode(param1, charset),
-                    URLEncoder.encode(param2, charset),
-                    URLEncoder.encode(param3, charset),
-                    URLEncoder.encode(param4, charset));
-                    connection = new URL(url).openConnection();
-                    connection.setDoOutput(true);
-                    connection.setRequestProperty("Accept-Charset", charset);
-                    connection.setRequestProperty(
-                            "Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
-                    output = connection.getOutputStream();
-                    output.write(query.getBytes(charset));
-                    output.close();
-                    response = connection.getInputStream();
-                    br = new BufferedReader((Reader) new InputStreamReader(response, "UTF-8"));
-                    for(String line=br.readLine(); line!=null; line=br.readLine()) {
-                        builder.append(line);
-                        builder.append('\n');
-                    }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        String responseStr = builder.toString();
-        List<Double> eleList = getEleArrayFromXMLResponse(responseStr);
-        for (int i = 0; i < routePoints.size(); i++) {
-            routePoints.get(i).setEle(eleList.get(i));
-        }
-        updateEleProps();
     }
     
     public static List<Double> getEleArrayFromXMLResponse(String xmlResponse) {
@@ -346,30 +296,32 @@ public class Route {
         return ret;
     }
     
-    // TODO MapQuest Open Elevation API does not seem to accept all parameters for chart POST request
-    public Image getElevationChartPOST() {
-        String xmlText = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><elevation><latLngCollection>";
+    public void correctElevation() { // POST KVP (remember: had problems with POST XML and useFilter parameter)
+        String latLngCollection = "";
         RoutePoint rtept = getStart();
-        xmlText += rtept.getLat() + "," + rtept.getLon();
+        latLngCollection += rtept.getLat() + "," + rtept.getLon();
         for (int i = 1; i < routePoints.size(); i++) {
             rtept = routePoints.get(i);
-            xmlText += "," + rtept.getLat() + "," + rtept.getLon();
+            latLngCollection += "," + rtept.getLat() + "," + rtept.getLon();
         }
-        xmlText += "</latLngCollection></elevation>";
-        String url = "http://open.mapquestapi.com/elevation/v1/chart";
+        String url = "http://open.mapquestapi.com/elevation/v1/profile";
         String charset = "UTF-8";
-        String param1 = "xml";
-        String param2 = "f";
-        String param3 = xmlText;
+        String param1 = "kvp"; // inFormat
+        String param2 = latLngCollection;
+        String param3 = "xml"; // outFormat
+        String param4 = "true"; // useFilter
         String query = null;
         URLConnection connection = null;
         OutputStream output = null;
         InputStream response = null;
+        BufferedReader br = null;
+        StringBuilder builder = new StringBuilder();
         try {
-            query = String.format("width=800&height=800&inFormat=%s&unit=%s&xml=%s",
+            query = String.format("&inFormat=%s" + "&latLngCollection=%s" + "&outFormat=%s" + "&useFilter=%s",
                     URLEncoder.encode(param1, charset),
                     URLEncoder.encode(param2, charset),
-                    URLEncoder.encode(param3, charset));
+                    URLEncoder.encode(param3, charset),
+                    URLEncoder.encode(param4, charset));
                     connection = new URL(url).openConnection();
                     connection.setDoOutput(true);
                     connection.setRequestProperty("Accept-Charset", charset);
@@ -379,6 +331,67 @@ public class Route {
                     output.write(query.getBytes(charset));
                     output.close();
                     response = connection.getInputStream();
+                    br = new BufferedReader((Reader) new InputStreamReader(response, "UTF-8"));
+                    for(String line=br.readLine(); line!=null; line=br.readLine()) {
+                        builder.append(line);
+                        builder.append('\n');
+                    }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        String responseStr = builder.toString();
+        List<Double> eleList = getEleArrayFromXMLResponse(responseStr);
+        if (eleList.size() == routePoints.size()) {
+            for (int i = 0; i < routePoints.size(); i++) {
+                routePoints.get(i).setEle(eleList.get(i));
+            }
+        } else {
+            // TODO inform user that elevation request was no good
+        }
+        updateEleProps();
+    }
+
+    public Image getElevationChart() { // POST KVP ... route length being shortened by MapQuest server side bug!
+        String latLngCollection = "";
+        RoutePoint rtept = getStart();
+        latLngCollection += rtept.getLat() + "," + rtept.getLon();
+        for (int i = 1; i < routePoints.size(); i++) {
+            rtept = routePoints.get(i);
+            latLngCollection += "," + rtept.getLat() + "," + rtept.getLon();
+        }
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int width = (int) (screenSize.getWidth() / 2D);
+        int height = (int) (screenSize.getHeight() / 2D);
+
+        String url = "http://open.mapquestapi.com/elevation/v1/chart";
+        String charset = "UTF-8";
+        String param1 = "kvp"; // inFormat
+        String param2 = "f"; // unit
+        String param3 = latLngCollection;
+        String param4 = Integer.toString(width); // width
+        String param5 = Integer.toString(height); // height
+        String query = null;
+        URLConnection connection = null;
+        OutputStream output = null;
+        InputStream response = null;
+        try {
+            query = String.format("inFormat=%s" + "&unit=%s" + "&latLngCollection=%s" +
+                    "&width=%s" + "&height=%s" + "&useFilter=true",
+                    URLEncoder.encode(param1, charset),
+                    URLEncoder.encode(param2, charset),
+                    URLEncoder.encode(param3, charset),
+                    URLEncoder.encode(param4, charset),
+                    URLEncoder.encode(param5, charset));
+            connection = new URL(url).openConnection();
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Accept-Charset", charset);
+            connection.setRequestProperty(
+                    "Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
+            output = connection.getOutputStream();
+            output.write(query.getBytes(charset));
+            System.out.println(query);
+            output.close();
+            response = connection.getInputStream();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -393,7 +406,7 @@ public class Route {
         return img;
     }
     
-    public Image getElevationChartGET() {
+    public Image getElevationChartGET() { // save temporarily for debugging
         BufferedImage img = null;
         int maxNumLatLonPairsToSend = 200; // limit to how big a GET request can be, depends on various factors
         for ( ; img == null && maxNumLatLonPairsToSend >= 10; maxNumLatLonPairsToSend /= 2) {

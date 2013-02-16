@@ -2,6 +2,8 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="C:/eclipse/workspace/GPXCreator/externals/JMapViewer_2013-01-13.jar"/>
+	<classpathentry kind="lib" path="C:/eclipse/workspace/GPXCreator/externals/jfreechart-1.0.14.jar"/>
+	<classpathentry kind="lib" path="C:/eclipse/workspace/GPXCreator/externals/jcommon-1.0.17.jar"/>
+	<classpathentry kind="lib" path="C:/eclipse/workspace/GPXCreator/externals/JMapViewer_2013-02-10.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

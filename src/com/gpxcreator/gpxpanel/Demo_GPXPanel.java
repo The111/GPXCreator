@@ -61,8 +61,8 @@ public class Demo_GPXPanel {
         panel.setZoom(14);
         panel.setCenter(new Point(OsmMercator.LonToX(-122.7693, 14), OsmMercator.LatToY(37.9525, 14)));
         
-        Route wildcat = new Route(new File("Wildcat to Palomarin__20120608_1111.gpx"));
+        Route wildcat = new Route(new File("IO/Wildcat to Palomarin__20120608_1111.gpx"));
         panel.addRoute(wildcat);
-        wildcat.saveToGPXFile(new File("wildcat-out.gpx"));
+        wildcat.saveToGPXFile(new File("IO/wildcat-out.gpx"));
     }
 }

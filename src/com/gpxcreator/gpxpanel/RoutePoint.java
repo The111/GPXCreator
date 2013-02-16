@@ -35,7 +35,11 @@ public class RoutePoint {
     }
 
     public void setEle(double ele) {
-        this.ele = ele;
+        if (ele == -32768) {
+            this.ele = 0; // TODO do something smarter here?
+        } else {
+            this.ele = ele;
+        }
     }
 
     public Date getTime() {
