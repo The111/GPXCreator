@@ -1,10 +1,6 @@
 package com.gpxcreator.gpxpanel;
 
 import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Image;
-import java.awt.Toolkit;
-import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -26,7 +22,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
-import javax.imageio.ImageIO;
 import javax.xml.bind.DatatypeConverter;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLOutputFactory;
@@ -351,109 +346,6 @@ public class Route {
         updateEleProps();
     }
 
-    public Image getElevationChart() { // POST KVP ... route length being shortened by MapQuest server side bug!
-        String latLngCollection = "";
-        RoutePoint rtept = getStart();
-        latLngCollection += rtept.getLat() + "," + rtept.getLon();
-        for (int i = 1; i < routePoints.size(); i++) {
-            rtept = routePoints.get(i);
-            latLngCollection += "," + rtept.getLat() + "," + rtept.getLon();
-        }
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        int width = (int) (screenSize.getWidth() / 2D);
-        int height = (int) (screenSize.getHeight() / 2D);
-
-        String url = "http://open.mapquestapi.com/elevation/v1/chart";
-        String charset = "UTF-8";
-        String param1 = "kvp"; // inFormat
-        String param2 = "f"; // unit
-        String param3 = latLngCollection;
-        String param4 = Integer.toString(width); // width
-        String param5 = Integer.toString(height); // height
-        String query = null;
-        URLConnection connection = null;
-        OutputStream output = null;
-        InputStream response = null;
-        try {
-            query = String.format("inFormat=%s" + "&unit=%s" + "&latLngCollection=%s" +
-                    "&width=%s" + "&height=%s" + "&useFilter=true",
-                    URLEncoder.encode(param1, charset),
-                    URLEncoder.encode(param2, charset),
-                    URLEncoder.encode(param3, charset),
-                    URLEncoder.encode(param4, charset),
-                    URLEncoder.encode(param5, charset));
-            connection = new URL(url).openConnection();
-            connection.setDoOutput(true);
-            connection.setRequestProperty("Accept-Charset", charset);
-            connection.setRequestProperty(
-                    "Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
-            output = connection.getOutputStream();
-            output.write(query.getBytes(charset));
-            System.out.println(query);
-            output.close();
-            response = connection.getInputStream();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        BufferedImage img = null;
-        if (response != null) {
-            try {
-                img = ImageIO.read(response);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return img;
-    }
-    
-    public Image getElevationChartGET() { // save temporarily for debugging
-        BufferedImage img = null;
-        int maxNumLatLonPairsToSend = 200; // limit to how big a GET request can be, depends on various factors
-        for ( ; img == null && maxNumLatLonPairsToSend >= 10; maxNumLatLonPairsToSend /= 2) {
-            String latLngCollection = "";
-            RoutePoint rtept = getStart();
-            latLngCollection += String.format("%.6f", rtept.getLat()) + "," + String.format("%.6f", rtept.getLon());
-            int increment = (getNumPts() / maxNumLatLonPairsToSend) + 1;
-            for (int i = 1; i < routePoints.size(); i += increment) {
-                rtept = routePoints.get(i);
-                latLngCollection += "," + String.format(
-                        "%.6f", rtept.getLat()) + "," + String.format("%.6f", rtept.getLon());
-            }
-            String url = "http://open.mapquestapi.com/elevation/v1/chart";
-            String charset = "UTF-8";
-            String param2 = "f";
-            String param3 = latLngCollection;
-            String query = null;
-            URLConnection connection = null;
-            InputStream response = null;
-            try {
-                Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-                double width = screenSize.getWidth();
-                double height = screenSize.getHeight();
-                query = String.format("width=" + (int) (width/2) + "&height=" + (int) (height/2) +
-                        "&unit=%s&latLngCollection=%s",
-                URLEncoder.encode(param2, charset),
-                URLEncoder.encode(param3, charset));
-                connection = new URL(url + "?" + query).openConnection();
-                connection.setRequestProperty("Accept-Charset", charset);
-                connection.setRequestProperty(
-                        "Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
-                response = connection.getInputStream();
-            } catch (IOException e) {
-                e.printStackTrace();
-                continue;
-            }
-            if (response != null) {
-                try {
-                    img = ImageIO.read(response);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-        return img;
-    }
-    
     public String getName() {
         return name;
     }

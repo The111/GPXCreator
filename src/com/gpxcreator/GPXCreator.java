@@ -97,21 +97,14 @@ public class GPXCreator extends JComponent {
             private JButton btnEditRouteProperties;
             private JToggleButton btnEditRouteAddPoints;
             private JToggleButton btnEditRouteDelPoints;
-            private JButton btnEleChartOld;
             private JButton btnEleChart;
             private JButton btnCorrectEle;
-            
-            
-            //private JToggleButton btnLatLonSearch;
+            private JComboBox<String> comboBoxTileSource;            
             private JLabel lblLon;
             private JTextField textFieldLat;
             private JLabel lblLat;
             private JTextField textFieldLon;
             private JToggleButton btnLatLonFocus;
-            
-            
-            
-            private JComboBox<String> comboBoxTileSource;
         private JSplitPane splitPaneMain;   // CENTER
             private JSplitPane splitPaneSidebar;    // LEFT
                 private JPanel containerLeftSidebarTop;        // TOP
@@ -131,8 +124,6 @@ public class GPXCreator extends JComponent {
             private Route activeRoute;
             private Cursor mapCursor;
             
-    //private AttributionSupport attribution = new AttributionSupport();
-
     /**
      * Launch the application.
      */
@@ -583,39 +574,6 @@ public class GPXCreator extends JComponent {
         });
         toolBarMain.add(btnCorrectEle);
         
-        /* ------------------------------------------------- OLD --------------------------------------------------- */
-        /* ---------------------------------------- ELEVATION CHART BUTTON ----------------------------------------- */
-        btnEleChartOld = new JButton("");
-        btnEleChartOld.setToolTipText("View elevation profile chart");
-        btnEleChartOld.setIcon(new ImageIcon(
-                GPXCreator.class.getResource("/com/gpxcreator/icons/elevation-chart-old.png")));
-        btnEleChartOld.setFocusable(false);
-        btnEleChartOld.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                if (activeRoute != null) {
-                    BufferedImage image = (BufferedImage) activeRoute.getElevationChart();
-                    JLabel label = new JLabel(new ImageIcon(image));
-                    JFrame f = new JFrame("Elevation profile for \"" +
-                            activeRoute.getName() + "\" (elevation data and chart provided by MapQuest.com)");
-                    InputStream in = GPXCreator.class.getResourceAsStream(
-                            "/com/gpxcreator/icons/elevation-chart-old.png");
-                    if (in != null) {
-                        try {
-                            f.setIconImage(ImageIO.read(in));
-                        } catch (IOException e1) {
-                            e1.printStackTrace();
-                        }
-                    }
-                    f.getContentPane().add(label);
-                    f.pack();
-                    f.setLocationRelativeTo(frame);
-                    f.setVisible(true);
-                }
-            }
-        });
-        //toolBarMain.add(btnEleChartOld);
-        
         /* ---------------------------------------- ELEVATION CHART BUTTON ----------------------------------------- */
         btnEleChart = new JButton("");
         btnEleChart.setToolTipText("View elevation profile");
@@ -903,9 +861,9 @@ public class GPXCreator extends JComponent {
         });
         toolBarMain.add(debug);*/
         
-        java.util.Properties systemProperties = System.getProperties();
+        /*java.util.Properties systemProperties = System.getProperties();
         systemProperties.setProperty("http.proxyHost", "proxy1.lmco.com");
-        systemProperties.setProperty("http.proxyPort", "80");
+        systemProperties.setProperty("http.proxyPort", "80");*/
     }
     
     public void routeNew() {
