@@ -12,12 +12,8 @@ import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.xy.XYDataset;
-import org.jfree.data.xy.XYSeries;
-import org.jfree.data.xy.XYSeriesCollection;
-import org.openstreetmap.gui.jmapviewer.OsmMercator;
 
 import com.gpxcreator.gpxpanel.Route;
-import com.gpxcreator.gpxpanel.RoutePoint;
 
 @SuppressWarnings("serial")
 public class ElevationChart extends JFrame {
@@ -37,12 +33,12 @@ public class ElevationChart extends JFrame {
     }
 
     private static XYDataset createDataset(Route route) {
-        XYSeries xyseries = new XYSeries(route.getName());
+        /*XYSeries xyseries = new XYSeries(route.getName());
         double lengthMeters = 0;
         double lengthMiles = 0;
-        RoutePoint curr = route.getStart();
-        RoutePoint prev;
-        for (RoutePoint rtept : route.getRoutePoints()) {
+        Waypoint curr = route.getStart();
+        Waypoint prev;
+        for (Waypoint rtept : route.getRoutePoints()) {
             prev = curr;
             curr = rtept;
             double increment = OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
@@ -55,7 +51,8 @@ public class ElevationChart extends JFrame {
         XYSeriesCollection xyseriescollection = new XYSeriesCollection();
         xyseriescollection.addSeries(xyseries);
         xyseriescollection.setIntervalWidth(0.0D);
-        return xyseriescollection;
+        return xyseriescollection;*/
+        return null; ///////////////////////////////////////////////////// REMOVE THIS LINE! //////////////////////
     }
 
     private static JFreeChart createChart(XYDataset xydataset, Route route) {
