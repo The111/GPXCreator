@@ -21,6 +21,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,6 +64,7 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
@@ -137,6 +140,7 @@ public class GPXCreator extends JComponent {
                     private JScrollPane scrollPaneRouteProps;
                         private DefaultTableModel tableModelRouteProps;
                         private JTable tableRouteProps;
+                        private SimpleDateFormat sdf;
             private GPXPanel mapPanel;              // RIGHT
             private GPXObject activeGPXObject;
             private Cursor mapCursor;
@@ -146,7 +150,7 @@ public class GPXCreator extends JComponent {
      */
     public static void main(String[] args) {
         try {
-            UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsClassicLookAndFeel");
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Throwable e) {
             e.printStackTrace();
         }
@@ -156,8 +160,6 @@ public class GPXCreator extends JComponent {
                     GPXCreator window = new GPXCreator();
                     window.frame.setVisible(true);
                     window.frame.requestFocusInWindow();
-                    //UIManager.setLookAndFeel("javax.swing.plaf.metal.MetalLookAndFeel");
-                    //SwingUtilities.updateComponentTreeUI(window.tree);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -199,6 +201,18 @@ public class GPXCreator extends JComponent {
         splitPaneMain = new JSplitPane();
         splitPaneMain.setContinuousLayout(true);
         frame.getContentPane().add(splitPaneMain, BorderLayout.CENTER);
+        
+        splitPaneMain.addPropertyChangeListener(new PropertyChangeListener() {
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        updatePropTableWidths();
+                    }
+                });
+            }
+        });
 
         /* ----------------------------------------------- MAP PANEL ----------------------------------------------- */
         mapPanel = new GPXPanel();
@@ -233,6 +247,7 @@ public class GPXCreator extends JComponent {
                 }
             }
         });
+        mapPanel.setZoomContolsVisible(false);
         
         /* ------------------------------------------ SIDEBAR SPLIT PANE ------------------------------------------- */
         splitPaneSidebar = new JSplitPane();
@@ -241,6 +256,7 @@ public class GPXCreator extends JComponent {
         splitPaneSidebar.setContinuousLayout(true);
         splitPaneSidebar.setOrientation(JSplitPane.VERTICAL_SPLIT);
         splitPaneMain.setLeftComponent(splitPaneSidebar);
+        splitPaneSidebar.setDividerLocation(210);
         
         /* -------------------------------------- LEFT SIDEBAR TOP CONTAINER --------------------------------------- */
         containerLeftSidebarTop = new JPanel();
@@ -316,7 +332,7 @@ public class GPXCreator extends JComponent {
         try {
             UIManager.setLookAndFeel("javax.swing.plaf.metal.MetalLookAndFeel");
             SwingUtilities.updateComponentTreeUI(tree);
-            UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsClassicLookAndFeel");
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -375,6 +391,7 @@ public class GPXCreator extends JComponent {
         containerRouteProps.setBorder(new CompoundBorder(
                 new MatteBorder(0, 1, 0, 1, (Color) new Color(0, 0, 0)), new EmptyBorder(2, 5, 5, 5)));
         containerLeftSidebarBottom.add(containerRouteProps);
+        sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z");
         
         /* --------------------------------------- ROUTE PROPERTIES HEADING ---------------------------------------- */
         labelRoutePropsHeading = new JLabel("Properties");
@@ -388,6 +405,7 @@ public class GPXCreator extends JComponent {
         /* ------------------------------------- ROUTE PROPERTIES TABLE/MODEL -------------------------------------- */
         tableModelRouteProps = new DefaultTableModel(new Object[]{"Name", "Value"},0);
         tableRouteProps = new JTable(tableModelRouteProps);
+        tableRouteProps.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
         tableRouteProps.setAlignmentY(Component.TOP_ALIGNMENT);
         tableRouteProps.setAlignmentX(Component.LEFT_ALIGNMENT);
         tableRouteProps.setBorder(new EmptyBorder(0, 0, 0, 0));
@@ -396,16 +414,17 @@ public class GPXCreator extends JComponent {
         tableRouteProps.setEnabled(false);
         tableRouteProps.getColumn("Name").setPreferredWidth(100);
         tableRouteProps.getColumn("Name").setMinWidth(100);
-        tableRouteProps.getColumn("Value").setPreferredWidth(140);
-        tableRouteProps.getColumn("Value").setMinWidth(140);
+        tableRouteProps.getColumn("Name").setMaxWidth(100);
+        
+        tableRouteProps.getColumnModel().setColumnMargin(0);
         
         /* -------------------------------------- ROUTE PROPERTIES SCROLLPANE -------------------------------------- */
+
         scrollPaneRouteProps = new JScrollPane(tableRouteProps);
         scrollPaneRouteProps.setAlignmentY(Component.TOP_ALIGNMENT);
         scrollPaneRouteProps.setAlignmentX(Component.LEFT_ALIGNMENT);
         scrollPaneRouteProps.setBorder(new LineBorder(new Color(0, 0, 0)));
         containerLeftSidebarBottom.add(scrollPaneRouteProps);
-        splitPaneSidebar.setDividerLocation(210);
         
         /* --------------------------------------------- MAIN TOOLBAR ---------------------------------------------- */
         toolBarMain = new JToolBar();
@@ -536,7 +555,8 @@ public class GPXCreator extends JComponent {
         mapPanel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (btnEditRouteAddPoints.isSelected() && activeGPXObject != null) {
+                if (btnEditRouteAddPoints.isSelected() && activeGPXObject != null
+                        && mapPanel.getCursor().getType() == Cursor.CROSSHAIR_CURSOR) {
                     int zoom = mapPanel.getZoom();
                     int x = e.getX();
                     int y = e.getY();
@@ -558,6 +578,15 @@ public class GPXCreator extends JComponent {
                         WaypointGroup wptGrp = (WaypointGroup) activeGPXObject;
                         wptGrp.addWaypoint(wpt, false);
                     }
+                    DefaultMutableTreeNode currentlySelected =
+                            (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+                    while (!currentlySelected.getUserObject().getClass().equals(GPXFile.class)) {
+                        currentlySelected = (DefaultMutableTreeNode) currentlySelected.getParent();
+                    }
+                    Object gpxFileObject = currentlySelected.getUserObject();
+                    GPXFile gpxFile = (GPXFile) gpxFileObject;
+                    gpxFile.updateAllProperties();
+                    
                     mapPanel.repaint();
                     resetRoutePropsTable();
                 }
@@ -570,9 +599,26 @@ public class GPXCreator extends JComponent {
                     if (btnEditRouteDelPoints.isSelected()) {
                         btnEditRouteDelPoints.setSelected(false);
                     }
+                    if (btnLatLonFocus.isSelected()) {
+                        btnLatLonFocus.setSelected(false);
+                    }
+                    if (activeGPXObject == null) {
+                        JOptionPane.showMessageDialog(frame,
+                                "Select a route before adding points.",
+                                "Warning",
+                                JOptionPane.WARNING_MESSAGE);
+                        btnEditRouteAddPoints.setSelected(false);
+                        return;
+                    }
                     if (activeGPXObject.getClass().equals(GPXFile.class)) {
                         if (((GPXFile) activeGPXObject).getRoutes().size() == 0) {
-                            ((GPXFile) activeGPXObject).addRoute();
+                            Route route = ((GPXFile) activeGPXObject).addRoute();
+                            DefaultMutableTreeNode selected =
+                                    (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();                            
+                            DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(route);
+                            selected.add(newNode);
+                            int[] ints = {selected.getIndex(newNode)};
+                            treeModel.nodesWereInserted(selected, ints);
                         } else if (((GPXFile) activeGPXObject).getRoutes().size() > 1) {
                             JOptionPane.showMessageDialog(frame,
                                     "<html>There are multiple routes in the selected file.<br>" +
@@ -591,7 +637,10 @@ public class GPXCreator extends JComponent {
                                 JOptionPane.WARNING_MESSAGE);
                         btnEditRouteAddPoints.setSelected(false);
                     }
-                }                
+                    mapCursor = new Cursor(Cursor.CROSSHAIR_CURSOR);
+                } else {
+                    mapCursor = new Cursor(Cursor.DEFAULT_CURSOR);
+                }
             }
         });
         
@@ -616,6 +665,9 @@ public class GPXCreator extends JComponent {
                     if (btnEditRouteAddPoints.isSelected()) {
                         btnEditRouteAddPoints.setSelected(false);
                     }
+                    if (btnLatLonFocus.isSelected()) {
+                        btnLatLonFocus.setSelected(false);
+                    }
                 }
             }
         });
@@ -630,7 +682,17 @@ public class GPXCreator extends JComponent {
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (activeGPXObject != null) {
-                    //activeGPXObject.correctElevation();
+                    WaypointGroup wptGrp = getWptGrpForEleQuery();
+                    if (wptGrp != null) {
+                        boolean corrected = wptGrp.correctElevation();
+                        if (!corrected) {
+                            JOptionPane.showMessageDialog(frame,
+                                    "<html>There was a problem correcting the elevation.<br>" +
+                                    "Try again with a shorter path.</html>",
+                                    "Error",
+                                    JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
                     resetRoutePropsTable();
                 }
             }
@@ -647,19 +709,28 @@ public class GPXCreator extends JComponent {
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (activeGPXObject != null) {
-                    /*JFrame f = new ElevationChart(
-                            "Elevation profile", activePath);
-                    InputStream in = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/elevation-chart.png");
-                    if (in != null) {
-                        try {
-                            f.setIconImage(ImageIO.read(in));
-                        } catch (IOException e1) {
-                            e1.printStackTrace();
+                    WaypointGroup wptGrp = getWptGrpForEleQuery();
+                    if (wptGrp != null) {
+                        DefaultMutableTreeNode currentlySelected =
+                                (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+                        while (!currentlySelected.getUserObject().getClass().equals(GPXFile.class)) {
+                            currentlySelected = (DefaultMutableTreeNode) currentlySelected.getParent();
                         }
+                        GPXFile gpxFile = (GPXFile) currentlySelected.getUserObject();
+                        JFrame f = new ElevationChart("Elevation profile", gpxFile.getName(), wptGrp);
+                        InputStream in = GPXCreator.class.getResourceAsStream(
+                                "/com/gpxcreator/icons/elevation-chart.png");
+                        if (in != null) {
+                            try {
+                                f.setIconImage(ImageIO.read(in));
+                            } catch (IOException e1) {
+                                e1.printStackTrace();
+                            }
+                        }
+                        f.setSize(frame.getWidth() - 150, frame.getHeight() - 100);
+                        f.setLocationRelativeTo(frame);
+                        f.setVisible(true);
                     }
-                    f.setSize(frame.getWidth() - 150, frame.getHeight() - 100);
-                    f.setLocationRelativeTo(frame);
-                    f.setVisible(true);*/
                 }
             }
         });
@@ -856,6 +927,13 @@ public class GPXCreator extends JComponent {
             @Override
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
+                    if (btnEditRouteAddPoints.isSelected()) {
+                        btnEditRouteAddPoints.setSelected(false);
+                    }
+                    if (btnEditRouteDelPoints.isSelected()) {
+                        btnEditRouteDelPoints.setSelected(false);
+                    }
+                    
                     mapCursor = new Cursor(Cursor.CROSSHAIR_CURSOR);
                     String latString = textFieldLat.getText();
                     String lonString = textFieldLon.getText();
@@ -997,7 +1075,7 @@ public class GPXCreator extends JComponent {
             currentlySelected = (DefaultMutableTreeNode) currentlySelected.getParent();
         }
         TreeNode[] nodes = treeModel.getPathToRoot(currentlySelected);
-        tree.setSelectionPath(new TreePath(nodes));        
+        tree.setSelectionPath(new TreePath(nodes));
         
         int returnVal = chooserFileSave.showSaveDialog(mapPanel);
         if (returnVal == JFileChooser.APPROVE_OPTION) {
@@ -1019,6 +1097,7 @@ public class GPXCreator extends JComponent {
             if (activeGPXObject.getClass().equals(GPXFile.class)) { // this is a GPX file
                 mapPanel.removeGPXFile((GPXFile) activeGPXObject);
                 activeGPXObject = null;
+                clearRoutePropsTable();
             } else {
                 if (activeGPXObject.getClass().equals(Route.class)) { // this is a route
                     ((GPXFile) parentObject).getRoutes().remove((Route) activeGPXObject);
@@ -1034,7 +1113,6 @@ public class GPXCreator extends JComponent {
                 tree.setSelectionPath(new TreePath(parentPath));
             } 
             mapPanel.repaint();
-            /*clearRoutePropsTable();*/ // TODO ?
         }
     }
     
@@ -1052,175 +1130,168 @@ public class GPXCreator extends JComponent {
     
     public void resetRoutePropsTable() {
         tableModelRouteProps.setRowCount(0);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z");
+        DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+        
         if (activeGPXObject.getClass().equals(GPXFile.class)) { // this is a GPX file
             GPXFile gpxFile = (GPXFile) activeGPXObject;
-            if (gpxFile.getRoutes().size() == 1 && gpxFile.getTracks().size() == 0) { // display route info
-                
-            } else if (gpxFile.getRoutes().size() == 0 && gpxFile.getTracks().size() == 1
-                    && gpxFile.getTracks().get(0).getTracksegs().size() == 1) { // display track info
-                Track trk = gpxFile.getTracks().get(0);
-                WaypointGroup trkPts = trk.getTracksegs().get(0);
-                if (!trk.getName().equals("")) {
-                    tableModelRouteProps.addRow(new Object[]{"name", trk.getName()});
-                }
-                if (!trk.getDesc().equals("")) {
-                    tableModelRouteProps.addRow(new Object[]{"desc", trk.getDesc()});
-                }
-                if (trk.getNumber() != 0) {
-                    tableModelRouteProps.addRow(new Object[]{"number", trk.getNumber()});
-                }
-                if (!trk.getType().equals("")) {
-                    tableModelRouteProps.addRow(new Object[]{"type", trk.getType()});
-                }
-                tableModelRouteProps.addRow(new Object[]{"# of pts", trkPts.getNumPts()});
-                String startTimeString = "";
-                String endTimeString = "";
-                if (trkPts.getStart() != null && trkPts.getEnd() != null) {
-                    Date startTimeDate = trkPts.getStart().getTime();
-                    Date endTimeDate = trkPts.getEnd().getTime();
-                    if (startTimeDate != null && endTimeDate != null) {
-                        startTimeString = sdf.format(startTimeDate);
-                        endTimeString = sdf.format(endTimeDate);
-                    }
-                }
-                tableModelRouteProps.addRow(new Object[]{"start time", startTimeString});
-                tableModelRouteProps.addRow(new Object[]{"end time", endTimeString});
-                long duration = trkPts.getDuration();
-                long hours = duration / 3600000;
-                long minutes = (duration - hours * 3600000) / 60000;
-                long seconds = (duration - hours * 3600000 - minutes * 60000) / 1000;
-                if (duration != 0) {
-                    tableModelRouteProps.addRow(new Object[]{"duration", hours + "hr " + minutes + "min " + seconds + "sec"});
-                } else {
-                    tableModelRouteProps.addRow(new Object[]{"duration", ""});
-                }
-                double lengthMiles = trkPts.getLengthMiles();
-                tableModelRouteProps.addRow(new Object[]{"length", String.format("%.2f mi", lengthMiles)});
-                tableModelRouteProps.addRow(
-                        new Object[]{"elevation (start)", String.format("%.0f ft", trkPts.getEleStartFeet())});
-                tableModelRouteProps.addRow(
-                        new Object[]{"elevation (end)", String.format("%.0f ft", trkPts.getEleEndFeet())});
-                tableModelRouteProps.addRow(
-                        new Object[]{"min elevation", String.format("%.0f ft", trkPts.getEleMinFeet())});
-                tableModelRouteProps.addRow(
-                        new Object[]{"max elevation", String.format("%.0f ft", trkPts.getEleMaxFeet())});
-                double grossRiseFeet = trkPts.getGrossRiseFeet();
-                double grossFallFeet = trkPts.getGrossFallFeet();
-                tableModelRouteProps.addRow(new Object[]{"gross rise", String.format("%.0f ft", grossRiseFeet)});
-                tableModelRouteProps.addRow(new Object[]{"gross fall", String.format("%.0f ft", grossFallFeet)});
-                double avgSpeedMph = (lengthMiles / duration) * 3600000;
-                if (Double.isNaN(avgSpeedMph) || Double.isInfinite(avgSpeedMph)) {
-                    avgSpeedMph = 0;
-                }
-                if (avgSpeedMph != 0) {
-                    tableModelRouteProps.addRow(new Object[]{"avg speed", String.format("%.1f mph", avgSpeedMph)});
-                } else {
-                    tableModelRouteProps.addRow(new Object[]{"avg speed", ""});
-                }
-                if (trkPts.getMaxSpeedMph() != 0) {
-                    tableModelRouteProps.addRow(
-                            new Object[]{"max speed", String.format("%.1f mph", trkPts.getMaxSpeedMph())});            
-                } else {
-                    tableModelRouteProps.addRow(new Object[]{"max speed", ""});
-                }
-                
-                long riseTime = trkPts.getRiseTime();
-                hours = riseTime / 3600000;
-                minutes = (riseTime - hours * 3600000) / 60000;
-                seconds = (riseTime - hours * 3600000 - minutes * 60000) / 1000;
-                if (riseTime != 0) {
-                    tableModelRouteProps.addRow(new Object[]{"rise time", hours + "hr " + minutes + "min " + seconds + "sec"});
-                } else {
-                    tableModelRouteProps.addRow(new Object[]{"rise time", ""});
-                }
-                long fallTime = trkPts.getFallTime();
-                hours = fallTime / 3600000;
-                minutes = (fallTime - hours * 3600000) / 60000;
-                seconds = (fallTime - hours * 3600000 - minutes * 60000) / 1000;
-                if (fallTime != 0) {
-                    tableModelRouteProps.addRow(new Object[]{"fall time", hours + "hr " + minutes + "min " + seconds + "sec"});
-                } else {
-                    tableModelRouteProps.addRow(new Object[]{"fall time", ""});
-                }
-                double avgRiseSpeedFph = (grossRiseFeet / riseTime) * 3600000;
-                double avgFallSpeedFph = (grossFallFeet / fallTime) * 3600000;
-                if (Double.isNaN(avgRiseSpeedFph) || Double.isInfinite(avgRiseSpeedFph)) {
-                    avgRiseSpeedFph = 0;
-                }
-                if (Double.isNaN(avgFallSpeedFph) || Double.isInfinite(avgFallSpeedFph)) {
-                    avgFallSpeedFph = 0;
-                }
-                if (avgRiseSpeedFph != 0) {
-                    tableModelRouteProps.addRow(new Object[]{"avg rise speed", String.format("%.0f ft/hr", avgRiseSpeedFph)});
-                } else {
-                    tableModelRouteProps.addRow(new Object[]{"avg rise speed", ""});
-                }
-                if (avgFallSpeedFph != 0) {
-                    tableModelRouteProps.addRow(new Object[]{"avg fall speed", String.format("%.0f ft/hr", avgFallSpeedFph)});
-                } else {
-                    tableModelRouteProps.addRow(new Object[]{"avg fall speed", ""});
-                }
-            } else { // display file top-level info
-                tableModelRouteProps.addRow(new Object[]{"name", gpxFile.getName()});
+            if (gpxFile.getRoutes().size() == 1 && gpxFile.getTracks().size() == 0) { // display single route details
+                tableModelRouteProps.addRow(new Object[]{"GPX name", gpxFile.getName()});
                 if (!gpxFile.getDesc().equals("")) {
-                    tableModelRouteProps.addRow(new Object[]{"desc", gpxFile.getDesc()});
+                    tableModelRouteProps.addRow(new Object[]{"GPX desc", gpxFile.getDesc()});
                 }
                 String timeString = "";
                 if (gpxFile.getTime() != null) {
                     Date time = gpxFile.getTime();
                     timeString = sdf.format(time);
                 }
-                tableModelRouteProps.addRow(new Object[]{"time", timeString});
+                tableModelRouteProps.addRow(new Object[]{"GPX time", timeString});
+                
+                Route rte = gpxFile.getRoutes().get(0);
+                propsDisplayRoute(rte);
+            } else if (gpxFile.getRoutes().size() == 0 && gpxFile.getTracks().size() == 1
+                    && gpxFile.getTracks().get(0).getTracksegs().size() == 1) { // display single track details
+                tableModelRouteProps.addRow(new Object[]{"GPX name", gpxFile.getName()});
+                if (!gpxFile.getDesc().equals("")) {
+                    tableModelRouteProps.addRow(new Object[]{"GPX desc", gpxFile.getDesc()});
+                }
+                String timeString = "";
+                if (gpxFile.getTime() != null) {
+                    Date time = gpxFile.getTime();
+                    timeString = sdf.format(time);
+                }
+                tableModelRouteProps.addRow(new Object[]{"GPX time", timeString});
+                
+                Track trk = gpxFile.getTracks().get(0);
+                WaypointGroup trkpts = trk.getTracksegs().get(0);
+                propsDisplayTrackseg(trk, trkpts);
+            } else { // display file top-level container info
+                tableModelRouteProps.addRow(new Object[]{"GPX name", gpxFile.getName()});
+                if (!gpxFile.getDesc().equals("")) {
+                    tableModelRouteProps.addRow(new Object[]{"GPX desc", gpxFile.getDesc()});
+                }
+                String timeString = "";
+                if (gpxFile.getTime() != null) {
+                    Date time = gpxFile.getTime();
+                    timeString = sdf.format(time);
+                }
+                tableModelRouteProps.addRow(new Object[]{"GPX time", timeString});
                 tableModelRouteProps.addRow(new Object[]{"waypoints",
                         gpxFile.getWaypointGroup().getWaypoints().size()});
                 tableModelRouteProps.addRow(new Object[]{"routes", gpxFile.getRoutes().size()});
                 tableModelRouteProps.addRow(new Object[]{"tracks", gpxFile.getTracks().size()});
             }
-        }
-        
-        
-        
-        
-        
-        
-        
-        
-        /*tableModelRouteProps.addRow(new Object[]{"type", activePath.getType()});
-        tableModelRouteProps.addRow(new Object[]{"# of pts", activePath.getNumPts()});
-        String startTimeString = "";
-        String endTimeString = "";
-        if (activePath.getStart() != null && activePath.getEnd() != null) {
-            Date startTimeDate = activePath.getStart().getTime();
-            Date endTimeDate = activePath.getEnd().getTime();
-            if (startTimeDate != null && endTimeDate != null) {
-                startTimeString = sdf.format(activePath.getStart().getTime());
-                endTimeString = sdf.format(activePath.getEnd().getTime());
+            
+        } else { // this is not a GPX file
+            DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) currentNode.getParent();
+            Object parentObject = parentNode.getUserObject();
+            
+            if (activeGPXObject.getClass().equals(Route.class)) { /// this is a route
+                Route rte = (Route) activeGPXObject;
+                propsDisplayRoute(rte);
+            } else if (activeGPXObject.getClass().equals(Track.class)) { // this is a track
+                Track trk = (Track) activeGPXObject;
+                if (trk.getTracksegs().size() == 1) { // display single trackseg details
+                    WaypointGroup trkpts = trk.getTracksegs().get(0);
+                    propsDisplayTrackseg(trk, trkpts);
+                } else { // display track container info
+                    if (!trk.getName().equals("")) {
+                        tableModelRouteProps.addRow(new Object[]{"track name", trk.getName()});
+                    }
+                    if (!trk.getDesc().equals("")) {
+                        tableModelRouteProps.addRow(new Object[]{"track desc", trk.getDesc()});
+                    }
+                    if (trk.getNumber() != 0) {
+                        tableModelRouteProps.addRow(new Object[]{"track number", trk.getNumber()});
+                    }
+                    if (!trk.getType().equals("")) {
+                        tableModelRouteProps.addRow(new Object[]{"track type", trk.getType()});
+                    }
+                    tableModelRouteProps.addRow(new Object[]{"segments", trk.getTracksegs().size()});
+                }
+            } else if (activeGPXObject.getClass().equals(WaypointGroup.class)) {
+                WaypointGroup wptGrp = (WaypointGroup) activeGPXObject;
+                if (!wptGrp.isPath()) { // this is a top level waypoint collection
+                    tableModelRouteProps.addRow(new Object[]{"waypoints", wptGrp.getWaypoints().size()});
+                    tableModelRouteProps.addRow(
+                            new Object[]{"min elevation", String.format("%.0f ft", wptGrp.getEleMinFeet())});
+                    tableModelRouteProps.addRow(
+                            new Object[]{"max elevation", String.format("%.0f ft", wptGrp.getEleMaxFeet())});
+                    
+                } else if (wptGrp.isTrackseg()) { // this is a trackseg
+                    Track trk = (Track) parentObject;
+                    propsDisplayTrackseg(trk, wptGrp);
+                }
             }
         }
-        tableModelRouteProps.addRow(new Object[]{"start time", startTimeString});
-        tableModelRouteProps.addRow(new Object[]{"end time", endTimeString});
-        long duration = activePath.getDuration();
+        updatePropTableWidths();
+    }
+    
+    public void propsDisplayRoute(Route rte) {
+        if (!rte.getName().equals("")) {
+            tableModelRouteProps.addRow(new Object[]{"route name", rte.getName()});
+        }
+        if (!rte.getDesc().equals("")) {
+            tableModelRouteProps.addRow(new Object[]{"route desc", rte.getDesc()});
+        }
+        if (rte.getNumber() != 0) {
+            tableModelRouteProps.addRow(new Object[]{"route number", rte.getNumber()});
+        }
+        if (!rte.getType().equals("")) {
+            tableModelRouteProps.addRow(new Object[]{"route type", rte.getType()});
+        }
+        WaypointGroup rtepts = rte.getPath();
+        propsDisplayPathDetails(rtepts);
+    }
+    
+    public void propsDisplayTrackseg(Track trk, WaypointGroup trkpts) {
+        if (!trk.getName().equals("")) {
+            tableModelRouteProps.addRow(new Object[]{"track name", trk.getName()});
+        }
+        if (!trk.getDesc().equals("")) {
+            tableModelRouteProps.addRow(new Object[]{"track desc", trk.getDesc()});
+        }
+        if (trk.getNumber() != 0) {
+            tableModelRouteProps.addRow(new Object[]{"track number", trk.getNumber()});
+        }
+        if (!trk.getType().equals("")) {
+            tableModelRouteProps.addRow(new Object[]{"track type", trk.getType()});
+        }
+        propsDisplayPathDetails(trkpts);
+    }
+    
+    public void propsDisplayPathDetails(WaypointGroup path) {
+        tableModelRouteProps.addRow(new Object[]{"# of pts", path.getNumPts()});
+        if (path.getStart() != null && path.getEnd() != null) {
+            Date startTimeDate = path.getStart().getTime();
+            Date endTimeDate = path.getEnd().getTime();
+            if (startTimeDate != null && endTimeDate != null) {
+                String startTimeString = "";
+                String endTimeString = "";
+                startTimeString = sdf.format(startTimeDate);
+                endTimeString = sdf.format(endTimeDate);
+                tableModelRouteProps.addRow(new Object[]{"start time", startTimeString});
+                tableModelRouteProps.addRow(new Object[]{"end time", endTimeString});
+            }
+        }
+        long duration = path.getDuration();
         long hours = duration / 3600000;
         long minutes = (duration - hours * 3600000) / 60000;
         long seconds = (duration - hours * 3600000 - minutes * 60000) / 1000;
         if (duration != 0) {
             tableModelRouteProps.addRow(new Object[]{"duration", hours + "hr " + minutes + "min " + seconds + "sec"});
-        } else {
-            tableModelRouteProps.addRow(new Object[]{"duration", ""});
         }
-        double lengthMiles = activePath.getLengthMiles();
+        double lengthMiles = path.getLengthMiles();
         tableModelRouteProps.addRow(new Object[]{"length", String.format("%.2f mi", lengthMiles)});
         tableModelRouteProps.addRow(
-                new Object[]{"elevation (start)", String.format("%.0f ft", activePath.getEleStartFeet())});
+                new Object[]{"elevation (start)", String.format("%.0f ft", path.getEleStartFeet())});
         tableModelRouteProps.addRow(
-                new Object[]{"elevation (end)", String.format("%.0f ft", activePath.getEleEndFeet())});
+                new Object[]{"elevation (end)", String.format("%.0f ft", path.getEleEndFeet())});
         tableModelRouteProps.addRow(
-                new Object[]{"min elevation", String.format("%.0f ft", activePath.getEleMinFeet())});
+                new Object[]{"min elevation", String.format("%.0f ft", path.getEleMinFeet())});
         tableModelRouteProps.addRow(
-                new Object[]{"max elevation", String.format("%.0f ft", activePath.getEleMaxFeet())});
-        double grossRiseFeet = activePath.getGrossRiseFeet();
-        double grossFallFeet = activePath.getGrossFallFeet();
+                new Object[]{"max elevation", String.format("%.0f ft", path.getEleMaxFeet())});
+        double grossRiseFeet = path.getGrossRiseFeet();
+        double grossFallFeet = path.getGrossFallFeet();
         tableModelRouteProps.addRow(new Object[]{"gross rise", String.format("%.0f ft", grossRiseFeet)});
         tableModelRouteProps.addRow(new Object[]{"gross fall", String.format("%.0f ft", grossFallFeet)});
         double avgSpeedMph = (lengthMiles / duration) * 3600000;
@@ -1229,33 +1300,24 @@ public class GPXCreator extends JComponent {
         }
         if (avgSpeedMph != 0) {
             tableModelRouteProps.addRow(new Object[]{"avg speed", String.format("%.1f mph", avgSpeedMph)});
-        } else {
-            tableModelRouteProps.addRow(new Object[]{"avg speed", ""});
         }
-        if (activePath.getMaxSpeedMph() != 0) {
-            tableModelRouteProps.addRow(
-                    new Object[]{"max speed", String.format("%.1f mph", activePath.getMaxSpeedMph())});            
-        } else {
-            tableModelRouteProps.addRow(new Object[]{"max speed", ""});
+        if (path.getMaxSpeedMph() != 0) {
+            tableModelRouteProps.addRow(new Object[]{"max speed", String.format("%.1f mph", path.getMaxSpeedMph())});            
         }
         
-        long riseTime = activePath.getRiseTime();
+        long riseTime = path.getRiseTime();
         hours = riseTime / 3600000;
         minutes = (riseTime - hours * 3600000) / 60000;
         seconds = (riseTime - hours * 3600000 - minutes * 60000) / 1000;
         if (riseTime != 0) {
             tableModelRouteProps.addRow(new Object[]{"rise time", hours + "hr " + minutes + "min " + seconds + "sec"});
-        } else {
-            tableModelRouteProps.addRow(new Object[]{"rise time", ""});
         }
-        long fallTime = activePath.getFallTime();
+        long fallTime = path.getFallTime();
         hours = fallTime / 3600000;
         minutes = (fallTime - hours * 3600000) / 60000;
         seconds = (fallTime - hours * 3600000 - minutes * 60000) / 1000;
         if (fallTime != 0) {
             tableModelRouteProps.addRow(new Object[]{"fall time", hours + "hr " + minutes + "min " + seconds + "sec"});
-        } else {
-            tableModelRouteProps.addRow(new Object[]{"fall time", ""});
         }
         double avgRiseSpeedFph = (grossRiseFeet / riseTime) * 3600000;
         double avgFallSpeedFph = (grossFallFeet / fallTime) * 3600000;
@@ -1267,17 +1329,71 @@ public class GPXCreator extends JComponent {
         }
         if (avgRiseSpeedFph != 0) {
             tableModelRouteProps.addRow(new Object[]{"avg rise speed", String.format("%.0f ft/hr", avgRiseSpeedFph)});
-        } else {
-            tableModelRouteProps.addRow(new Object[]{"avg rise speed", ""});
         }
         if (avgFallSpeedFph != 0) {
             tableModelRouteProps.addRow(new Object[]{"avg fall speed", String.format("%.0f ft/hr", avgFallSpeedFph)});
+        }
+    }
+    
+    public void updatePropTableWidths() {
+        int width = 0;
+        for (int row = 0; row < tableRouteProps.getRowCount(); row++) {
+            TableCellRenderer renderer = tableRouteProps.getCellRenderer(row, 1);
+            Component comp = tableRouteProps.prepareRenderer(renderer, row, 1);
+            width = Math.max (comp.getPreferredSize().width, width);
+        }
+        width += tableRouteProps.getIntercellSpacing().width;
+        int tableWidth = width + 100;
+        if (tableWidth > scrollPaneRouteProps.getWidth()) {
+            tableRouteProps.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+            tableRouteProps.getColumn("Value").setPreferredWidth(width);
+            tableRouteProps.getColumn("Value").setMinWidth(width);
         } else {
-            tableModelRouteProps.addRow(new Object[]{"avg fall speed", ""});
-        }*/
+            tableRouteProps.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+        }
     }
     
     public void clearRoutePropsTable() {
         tableModelRouteProps.setRowCount(0);
+    }
+    
+    public WaypointGroup getWptGrpForEleQuery() {
+        WaypointGroup wptGrp = null;
+        boolean warn = false;
+        if (activeGPXObject.getClass().equals(WaypointGroup.class)) {
+            wptGrp = (WaypointGroup) activeGPXObject; 
+        } else if (activeGPXObject.getClass().equals(Route.class)) {
+            wptGrp = ((Route) activeGPXObject).getPath(); 
+        } else if (activeGPXObject.getClass().equals(Track.class)) {
+            Track trk = (Track) activeGPXObject;
+            if (trk.getTracksegs().size() == 1) {
+                wptGrp = trk.getTracksegs().get(0); 
+            } else {
+                warn = true;
+            }
+        } else if (activeGPXObject.getClass().equals(GPXFile.class)) {
+            GPXFile gpxFile = (GPXFile) activeGPXObject;
+            if (gpxFile.getRoutes().size() == 1 && gpxFile.getTracks().size() == 0) { // one route
+                wptGrp = gpxFile.getRoutes().get(0).getPath(); 
+            } else if (gpxFile.getRoutes().size() == 0 && gpxFile.getTracks().size() == 1) { // one track
+                Track trk = gpxFile.getTracks().get(0);
+                if (trk.getTracksegs().size() == 1) { // one trackseg
+                    wptGrp = trk.getTracksegs().get(0);
+                } else {
+                    warn = true;
+                }
+            } else {
+                warn = true;
+            }
+        } else {
+            warn = true;
+        }
+        if (warn) {
+            JOptionPane.showMessageDialog(frame,
+                    "Select a route, track segment, or group of waypoints first.",
+                    "Warning",
+                    JOptionPane.WARNING_MESSAGE);
+        }
+        return wptGrp;
     }
 }

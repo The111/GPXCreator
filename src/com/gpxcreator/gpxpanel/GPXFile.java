@@ -57,7 +57,7 @@ public class GPXFile extends GPXObject {
         this.desc = "";
         this.link = "www.gpxcreator.com";
         this.time = new Date();
-        this.waypointGroup = new WaypointGroup(color, false);
+        this.waypointGroup = new WaypointGroup(color, false, false, false);
         this.routes = new ArrayList<Route>();
         this.tracks = new ArrayList<Track>();
     }
@@ -113,7 +113,7 @@ public class GPXFile extends GPXObject {
                                 inRte = true;
                                 route = new Route(this.color);
                                 this.routes.add(route);
-                                path = new WaypointGroup(this.color, true);
+                                path = new WaypointGroup(this.color, true, false, true);
                                 route.setPath(path);
                                 break;
                             case "trk":
@@ -123,7 +123,7 @@ public class GPXFile extends GPXObject {
                                 break;
                             case "trkseg":
                                 inTrkseg = true;
-                                path = new WaypointGroup(this.color, true);
+                                path = new WaypointGroup(this.color, true, true, false);
                                 path.setTrackseg(true);
                                 track.getTracksegs().add(path);
                                 break;
@@ -628,12 +628,48 @@ public class GPXFile extends GPXObject {
     public Route addRoute() {
         Route route = new Route(color);
         route.setName(this.name);
-        route.setPath(new WaypointGroup(color, true));
+        route.setPath(new WaypointGroup(color, true, false, true));
         routes.add(route);
         return route;
     }
 
     public List<Track> getTracks() {
         return tracks;
+    }
+    
+    public void updateAllProperties() {
+        if (waypointGroup.getWaypoints().size() > 1) {
+            waypointGroup.updateAllProperties();
+        }
+        for (Route route : routes) {
+            route.updateAllProperties();
+        }
+        for (Track track : tracks) {
+            track.updateAllProperties();
+        }
+        updateMinMaxLatLon();
+    }
+    
+    public void updateMinMaxLatLon() {
+        for (Route route : routes) {
+            route.updateAllProperties();
+            minLat = Math.min(minLat, route.getMinLat());
+            minLon = Math.min(minLon, route.getMinLon());
+            maxLat = Math.max(maxLat, route.getMaxLat());
+            maxLon = Math.max(maxLon, route.getMaxLon());
+        }
+        for (Track track : tracks) {
+            track.updateAllProperties();
+            minLat = Math.min(minLat, track.getMinLat());
+            minLon = Math.min(minLon, track.getMinLon());
+            maxLat = Math.max(maxLat, track.getMaxLat());
+            maxLon = Math.max(maxLon, track.getMaxLon());
+        }
+        for (Waypoint waypoint : waypointGroup.getWaypoints()) {
+            minLat = Math.min(minLat, waypoint.getLat());
+            minLon = Math.min(minLon, waypoint.getLon());
+            maxLat = Math.max(maxLat, waypoint.getLat());
+            maxLon = Math.max(maxLon, waypoint.getLon());
+        }
     }
 }

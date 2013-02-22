@@ -31,6 +31,7 @@ public class Route extends GPXObject {
     
     public Route(Color color) {
         super(color);
+        this.type = "";
     }
     
     public String toString() {

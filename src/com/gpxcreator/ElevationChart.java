@@ -12,16 +12,20 @@ import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.xy.XYDataset;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
+import org.openstreetmap.gui.jmapviewer.OsmMercator;
 
-import com.gpxcreator.gpxpanel.Route;
+import com.gpxcreator.gpxpanel.Waypoint;
+import com.gpxcreator.gpxpanel.WaypointGroup;
 
 @SuppressWarnings("serial")
 public class ElevationChart extends JFrame {
 
-    public ElevationChart(String s, Route route) {
-        super(s);
-        XYDataset xydataset = createDataset(route);
-        JFreeChart jfreechart = createChart(xydataset, route);
+    public ElevationChart(String title, String headingPrefix, WaypointGroup wptGrp) {
+        super(title);
+        XYDataset xydataset = createDataset(wptGrp);
+        JFreeChart jfreechart = createChart(xydataset, wptGrp, headingPrefix);
         jfreechart.setRenderingHints(
                 new RenderingHints(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON));
         ChartPanel chartpanel = new ChartPanel(jfreechart);
@@ -32,15 +36,15 @@ public class ElevationChart extends JFrame {
         setContentPane(chartpanel);
     }
 
-    private static XYDataset createDataset(Route route) {
-        /*XYSeries xyseries = new XYSeries(route.getName());
+    private static XYDataset createDataset(WaypointGroup wptGrp) {
+        XYSeries xyseries = new XYSeries(wptGrp.getName());
         double lengthMeters = 0;
         double lengthMiles = 0;
-        Waypoint curr = route.getStart();
+        Waypoint curr = wptGrp.getStart();
         Waypoint prev;
-        for (Waypoint rtept : route.getRoutePoints()) {
+        for (Waypoint wpt : wptGrp.getWaypoints()) {
             prev = curr;
-            curr = rtept;
+            curr = wpt;
             double increment = OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
             if (!Double.isNaN(increment)) {
                 lengthMeters += OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
@@ -51,23 +55,30 @@ public class ElevationChart extends JFrame {
         XYSeriesCollection xyseriescollection = new XYSeriesCollection();
         xyseriescollection.addSeries(xyseries);
         xyseriescollection.setIntervalWidth(0.0D);
-        return xyseriescollection;*/
-        return null; ///////////////////////////////////////////////////// REMOVE THIS LINE! //////////////////////
+        return xyseriescollection;
     }
 
-    private static JFreeChart createChart(XYDataset xydataset, Route route) {
-        JFreeChart jfreechart = ChartFactory.createXYAreaChart(
-                route.getName(), "Distance (miles)", "Elevation (ft)",
+    private static JFreeChart createChart(XYDataset xydataset, WaypointGroup wptGrp, String headingPrefix) {
+        JFreeChart jfreechart = null;
+        if (!wptGrp.isPath()) {
+            jfreechart = ChartFactory.createScatterPlot(
+                    headingPrefix + " - " + wptGrp.getName(), "Distance (miles)", "Elevation (ft)",
+                    xydataset, PlotOrientation.VERTICAL, false, false, false);
+        } else {
+            jfreechart = ChartFactory.createXYAreaChart(
+                headingPrefix + " - " + wptGrp.getName(), "Distance (miles)", "Elevation (ft)",
                 xydataset, PlotOrientation.VERTICAL, false, false, false);
+        }
+        
         XYPlot xyplot = (XYPlot)jfreechart.getPlot();
         xyplot.getRenderer().setSeriesPaint(0, new Color(38, 128, 224));
         xyplot.setForegroundAlpha(0.65F);
         
         ValueAxis domainAxis = xyplot.getDomainAxis();
-        domainAxis.setRange(0, route.getLengthMiles());
+        domainAxis.setRange(0, wptGrp.getLengthMiles());
         
-        double eleMin = route.getEleMinFeet();
-        double eleMax = route.getEleMaxFeet();
+        double eleMin = wptGrp.getEleMinFeet();
+        double eleMax = wptGrp.getEleMaxFeet();
         double eleChange = eleMax - eleMin;
         double padding = eleChange / 10D;
         double rangeMin = eleMin - padding;

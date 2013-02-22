@@ -27,6 +27,7 @@ public class GPXObject {
         this.maxLat = -86;
         this.minLon =  180;
         this.maxLon = -180;
+        this.desc = "";
     }
     
     public GPXObject(boolean randomColor) {

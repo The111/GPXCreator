@@ -46,13 +46,17 @@ public class WaypointGroup extends GPXObject {
     private long riseTime;
     private long fallTime;
     
-    public WaypointGroup(Color color, boolean isPath) {
+    public WaypointGroup(Color color, boolean isPath, boolean isTrackseg, boolean isRoute) {
         super(color);
         this.setPath(isPath);
         if (!isPath) {
             this.name = "Waypoints";
-        } else {
+        } else if (isTrackseg) {
             this.name = "Track segment";
+        } else if (isRoute) {
+            this.name = "Route";
+        } else {
+            this.name = "Error";
         }
         waypoints = new ArrayList<Waypoint>();
     }
@@ -154,7 +158,10 @@ public class WaypointGroup extends GPXObject {
         return ret;
     }
     
-    public void correctElevation() { // POST KVP (remember: had problems with POST XML and useFilter parameter)
+    public boolean correctElevation() { // POST KVP (remember: had problems with POST XML and useFilter parameter)
+        if (waypoints.size() < 1) {
+            return true;
+        }
         String latLngCollection = "";
         Waypoint rtept = getStart();
         latLngCollection += rtept.getLat() + "," + rtept.getLon();
@@ -198,15 +205,21 @@ public class WaypointGroup extends GPXObject {
             e.printStackTrace();
         }
         String responseStr = builder.toString();
-        List<Double> eleList = getEleArrayFromXMLResponse(responseStr);
-        if (eleList.size() == waypoints.size()) {
-            for (int i = 0; i < waypoints.size(); i++) {
-                waypoints.get(i).setEle(eleList.get(i));
-            }
+        
+        if (responseStr.contains("Given Route exceeds the maximum allowed distance")) {
+            return false;
         } else {
-            // TODO inform user that elevation request was no good
+            List<Double> eleList = getEleArrayFromXMLResponse(responseStr);
+            if (eleList.size() == waypoints.size()) {
+                for (int i = 0; i < waypoints.size(); i++) {
+                    waypoints.get(i).setEle(eleList.get(i));
+                }
+            } else {
+                return false;
+            }
+            updateEleProps();
+            return true;
         }
-        updateEleProps();
     }
     
     public int getNumPts() {
@@ -237,7 +250,7 @@ public class WaypointGroup extends GPXObject {
     }
     
     public void updateDuration() {
-        Date startTime = getEnd().getTime();
+        Date startTime = getStart().getTime();
         Date endTime = getEnd().getTime();
         if (startTime != null && endTime != null) {
             duration = getEnd().getTime().getTime()- getStart().getTime().getTime();

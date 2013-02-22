@@ -34,6 +34,7 @@ public class Track extends GPXObject {
     public Track(Color color) {
         super(color);
         tracksegs = new ArrayList<WaypointGroup>();
+        this.type = "";
     }
     
     public String toString() {
