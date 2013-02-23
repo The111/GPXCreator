@@ -13,6 +13,7 @@ public class Waypoint extends GPXObject {
     public Waypoint(double lat, double lon) {
         this.lat = lat;
         this.lon = lon;
+        this.name = "waypoint";
     }
 
     public double getEle() {

@@ -65,10 +65,7 @@ public class Track extends GPXObject {
         maxLon = -180;
         
         for (WaypointGroup trackseg : tracksegs) {
-            trackseg.updateDuration();
-            trackseg.updateLength();
-            trackseg.updateMaxSpeed();
-            trackseg.updateEleProps();
+            trackseg.updateAllProperties();
             
             duration += trackseg.getDuration();
             maxSpeedKmph = Math.max(maxSpeedKmph, trackseg.getMaxSpeedKmph());

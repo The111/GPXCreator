@@ -66,7 +66,12 @@ public class WaypointGroup extends GPXObject {
         if (getNumPts() > 1) {
             updateAllProperties(); // TODO make this less expensive?
         }
-        checkMinMaxLatLon(wpt.getLat(), wpt.getLon());
+        updateBoundsQuick(wpt.getLat(), wpt.getLon());
+    }
+    
+    public void removeWaypoint(Waypoint wpt) {
+        waypoints.remove(wpt);
+        updateBounds();
     }
     
     public boolean isPath() {
@@ -243,10 +248,21 @@ public class WaypointGroup extends GPXObject {
     }
 
     public void updateAllProperties() {
-        updateDuration();
-        updateLength();
-        updateMaxSpeed();
-        updateEleProps();
+        if (waypoints.size() > 0) {
+            updateDuration();
+            updateLength();
+            updateMaxSpeed();
+            updateEleProps();
+        } else {
+            eleStartMeters = 0;
+            eleStartFeet = 0;
+            eleEndMeters = 0;
+            eleEndFeet = 0;
+            eleMinMeters = 0;
+            eleMinFeet = 0;
+            eleMaxMeters = 0;
+            eleMaxFeet = 0;
+        }
     }
     
     public void updateDuration() {
@@ -416,10 +432,23 @@ public class WaypointGroup extends GPXObject {
         return fallTime;
     }
 
-    public void checkMinMaxLatLon(double lat, double lon) {
+    public void updateBoundsQuick(double lat, double lon) {
         minLat = Math.min(minLat, lat);
         maxLat = Math.max(maxLat, lat);
         minLon = Math.min(minLon, lon);
         maxLon = Math.max(maxLon, lon);
+    }
+    
+    public void updateBounds() {
+        minLat = Double.MAX_VALUE;
+        minLon = Double.MAX_VALUE;
+        maxLat = -Double.MAX_VALUE;
+        maxLon = -Double.MAX_VALUE;
+        for (Waypoint wpt : waypoints) {
+            minLat = Math.min(minLat, wpt.getLat());
+            minLon = Math.min(minLon, wpt.getLon());
+            maxLat = Math.max(maxLat, wpt.getLat());
+            maxLon = Math.max(maxLon, wpt.getLon());
+        }
     }
 }

@@ -48,10 +48,7 @@ public class Route extends GPXObject {
     }
 
     public void updateAllProperties() {
-        path.updateDuration();
-        path.updateLength();
-        path.updateMaxSpeed();
-        path.updateEleProps();
+        path.updateAllProperties();
         
         this.duration = path.getDuration();
         this.maxSpeedKmph = path.getMaxSpeedKmph();

@@ -20,6 +20,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -144,6 +145,9 @@ public class GPXCreator extends JComponent {
             private GPXPanel mapPanel;              // RIGHT
             private GPXObject activeGPXObject;
             private Cursor mapCursor;
+            private WaypointGroup wptGrpToDeleteFrom;
+            private Waypoint wptToDelete;
+            private boolean okToDeleteWpt;
 
     /**
      * Launch the application.
@@ -621,8 +625,8 @@ public class GPXCreator extends JComponent {
                             treeModel.nodesWereInserted(selected, ints);
                         } else if (((GPXFile) activeGPXObject).getRoutes().size() > 1) {
                             JOptionPane.showMessageDialog(frame,
-                                    "<html>There are multiple routes in the selected file.<br>" +
-                                    "Select a single route before attempting to add points.</html>",
+                                    "<html>There are multiple routes in the selected file. Select a single<br>" +
+                                    "route or waypoint group before attempting to add points.</html>",
                                     "Warning",
                                     JOptionPane.WARNING_MESSAGE);
                             btnEditRouteAddPoints.setSelected(false);
@@ -648,6 +652,7 @@ public class GPXCreator extends JComponent {
             @Override
             public void valueChanged(TreeSelectionEvent e) {
                 btnEditRouteAddPoints.setSelected(false);
+                btnEditRouteDelPoints.setSelected(false);
             }
         });
         
@@ -668,7 +673,77 @@ public class GPXCreator extends JComponent {
                     if (btnLatLonFocus.isSelected()) {
                         btnLatLonFocus.setSelected(false);
                     }
+                    if (activeGPXObject != null) {
+                        WaypointGroup dummy = getActiveWptGrp();
+                        if (dummy == null) {
+                            btnEditRouteDelPoints.setSelected(false);
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(frame,
+                                "Select a route, track segment, or group of waypoints first.",
+                                "Warning",
+                                JOptionPane.WARNING_MESSAGE);
+                        btnEditRouteDelPoints.setSelected(false);
+                    }
+                    mapCursor = new Cursor(Cursor.CROSSHAIR_CURSOR);
+                } else {
+                    mapCursor = new Cursor(Cursor.DEFAULT_CURSOR);
                 }
+            }
+        });
+        
+        mapPanel.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                updateMapDeleteSymbol(e);
+            }
+            
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                wptGrpToDeleteFrom = null;
+                wptToDelete = null;
+                okToDeleteWpt = false;
+                mapPanel.setShownPoint(null);
+                mapPanel.repaint();
+            }
+        });
+        
+        mapPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseExited(MouseEvent e) {
+                wptGrpToDeleteFrom = null;
+                wptToDelete = null;
+                okToDeleteWpt = false;
+                mapPanel.setShownPoint(null);
+                mapPanel.repaint();
+            }
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (okToDeleteWpt && wptToDelete != null && wptGrpToDeleteFrom != null) {
+                    wptGrpToDeleteFrom.removeWaypoint(wptToDelete);
+                    wptGrpToDeleteFrom = null;
+                    wptToDelete = null;
+                    okToDeleteWpt = false;
+                    mapPanel.setShownPoint(null);
+                    mapPanel.repaint();
+                    
+                    DefaultMutableTreeNode currentlySelected =
+                            (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+                    while (!currentlySelected.getUserObject().getClass().equals(GPXFile.class)) {
+                        currentlySelected = (DefaultMutableTreeNode) currentlySelected.getParent();
+                    }
+                    Object gpxFileObject = currentlySelected.getUserObject();
+                    GPXFile gpxFile = (GPXFile) gpxFileObject;
+                    gpxFile.updateAllProperties();
+                    resetRoutePropsTable();
+                    
+                    updateMapDeleteSymbol(e);
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                updateMapDeleteSymbol(e);
             }
         });
         
@@ -682,7 +757,7 @@ public class GPXCreator extends JComponent {
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (activeGPXObject != null) {
-                    WaypointGroup wptGrp = getWptGrpForEleQuery();
+                    WaypointGroup wptGrp = getActiveWptGrp();
                     if (wptGrp != null) {
                         boolean corrected = wptGrp.correctElevation();
                         if (!corrected) {
@@ -709,7 +784,7 @@ public class GPXCreator extends JComponent {
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (activeGPXObject != null) {
-                    WaypointGroup wptGrp = getWptGrpForEleQuery();
+                    WaypointGroup wptGrp = getActiveWptGrp();
                     if (wptGrp != null) {
                         DefaultMutableTreeNode currentlySelected =
                                 (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
@@ -1357,7 +1432,7 @@ public class GPXCreator extends JComponent {
         tableModelRouteProps.setRowCount(0);
     }
     
-    public WaypointGroup getWptGrpForEleQuery() {
+    public WaypointGroup getActiveWptGrp() {
         WaypointGroup wptGrp = null;
         boolean warn = false;
         if (activeGPXObject.getClass().equals(WaypointGroup.class)) {
@@ -1395,5 +1470,40 @@ public class GPXCreator extends JComponent {
                     JOptionPane.WARNING_MESSAGE);
         }
         return wptGrp;
+    }
+    
+    private void updateMapDeleteSymbol(MouseEvent e) { // common function used by 2 mouse listeners 3 times
+        if (btnEditRouteDelPoints.isSelected()) {
+            wptGrpToDeleteFrom = getActiveWptGrp();
+            wptToDelete = null;
+            if (wptGrpToDeleteFrom != null) {
+                Point p = e.getPoint();
+                boolean found = false;
+                okToDeleteWpt = false;
+                double minDistance = Double.MAX_VALUE;
+                for (Waypoint wpt : wptGrpToDeleteFrom.getWaypoints()) {
+                    Point w = mapPanel.getMapPosition(wpt.getLat(), wpt.getLon(), false);
+                    int dx = w.x - p.x;
+                    int dy = w.y - p.y;
+                    double distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < 10 && distance < minDistance) {
+                        minDistance = distance;
+                        wptToDelete = wpt;
+                        mapPanel.setShownPoint(w);
+                        found = true;
+                    }
+                }
+                okToDeleteWpt = true;
+                if (!found) {
+                    wptGrpToDeleteFrom = null;
+                    wptToDelete = null;
+                    okToDeleteWpt = false;
+                    mapPanel.setShownPoint(null);
+                }
+                mapPanel.repaint();
+            } else {
+                btnEditRouteDelPoints.setSelected(false);
+            }
+        }        
     }
 }

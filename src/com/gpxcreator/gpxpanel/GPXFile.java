@@ -136,7 +136,7 @@ public class GPXFile extends GPXObject {
                                 waypoint = new Waypoint(lat, lon);
                                 if (inRte || inTrkseg) {
                                     path.addWaypoint(waypoint);
-                                    path.checkMinMaxLatLon(lat, lon);
+                                    path.updateBoundsQuick(lat, lon);
                                 } else if (inWpt) {
                                     this.waypointGroup.addWaypoint(waypoint);
                                 }
@@ -651,6 +651,11 @@ public class GPXFile extends GPXObject {
     }
     
     public void updateMinMaxLatLon() {
+        minLat = Double.MAX_VALUE;
+        minLon = Double.MAX_VALUE;
+        maxLat = -Double.MAX_VALUE;
+        maxLon = -Double.MAX_VALUE;
+        
         for (Route route : routes) {
             route.updateAllProperties();
             minLat = Math.min(minLat, route.getMinLat());
