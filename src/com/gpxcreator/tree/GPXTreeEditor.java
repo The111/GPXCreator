@@ -97,13 +97,7 @@ public class GPXTreeEditor implements TreeCellEditor {
         return editorComponent;
     }
 
-    @Override
-    public Object getCellEditorValue() {
-        return null;
-    }
-
-    @Override
-    public boolean isCellEditable(EventObject anEvent) {
+    @Override public boolean isCellEditable(EventObject anEvent) {
         return true;
     }
 
@@ -118,15 +112,8 @@ public class GPXTreeEditor implements TreeCellEditor {
         return false;
     }
 
-    @Override
-    public void cancelCellEditing() {
-    }
-
-    @Override
-    public void addCellEditorListener(CellEditorListener l) {
-    }
-
-    @Override
-    public void removeCellEditorListener(CellEditorListener l) {
-    }
+    @Override public Object getCellEditorValue() {return null;}
+    @Override public void cancelCellEditing() {}
+    @Override public void addCellEditorListener(CellEditorListener l) {}
+    @Override public void removeCellEditorListener(CellEditorListener l) {}
 }

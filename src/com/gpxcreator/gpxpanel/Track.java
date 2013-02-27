@@ -4,37 +4,19 @@ import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.gpxcreator.gpxpanel.WaypointGroup.WptGrpType;
+
 public class Track extends GPXObject {
 
     protected int number;
     protected String type;
     
     private List<WaypointGroup> tracksegs;
-
-    private long duration;
-    private double maxSpeedKmph;
-    private double maxSpeedMph;
-    private double lengthMeters;
-    private double lengthMiles;
-    private double eleStartMeters;
-    private double eleStartFeet;
-    private double eleEndMeters;
-    private double eleEndFeet;
-    private double eleMinMeters;
-    private double eleMinFeet;
-    private double eleMaxMeters;
-    private double eleMaxFeet;
-    private double grossRiseFeet;
-    private double grossRiseMeters;
-    private double grossFallFeet;
-    private double grossFallMeters;
-    private long riseTime;
-    private long fallTime;
     
     public Track(Color color) {
         super(color);
-        tracksegs = new ArrayList<WaypointGroup>();
         this.type = "";
+        tracksegs = new ArrayList<WaypointGroup>();
     }
     
     public String toString() {
@@ -52,13 +34,40 @@ public class Track extends GPXObject {
         }
     }
     
+    public int getNumber() {
+        return number;
+    }
+
+    public void setNumber(int number) {
+        this.number = number;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public List<WaypointGroup> getTracksegs() {
+        return tracksegs;
+    }
+    
+    public WaypointGroup addTrackseg() {
+        WaypointGroup trackseg = new WaypointGroup(this.color, WptGrpType.TRACKSEG);
+        tracksegs.add(trackseg);
+        return trackseg;
+    }
+
+    @Override
     public void updateAllProperties() {
-        maxSpeedKmph = -Double.MAX_VALUE;
-        maxSpeedMph = -Double.MAX_VALUE;
-        eleMinMeters = Double.MAX_VALUE;
-        eleMinFeet = Double.MAX_VALUE;
-        eleMaxMeters = -Double.MAX_VALUE;
-        eleMaxFeet = -Double.MAX_VALUE;
+        maxSpeedKmph = 0;
+        maxSpeedMph = 0;
+        eleMinMeters = Integer.MAX_VALUE;
+        eleMinFeet = Integer.MAX_VALUE;
+        eleMaxMeters = Integer.MIN_VALUE;
+        eleMaxFeet = Integer.MIN_VALUE;
         minLat =  86;
         maxLat = -86;
         minLon =  180;
@@ -93,105 +102,5 @@ public class Track extends GPXObject {
         eleStartFeet = tracksegs.get(0).getEleStartFeet();
         eleEndMeters = tracksegs.get(tracksegs.size() - 1).getEleEndMeters();
         eleEndFeet = tracksegs.get(tracksegs.size() - 1).getEleEndFeet();
-    }
-
-    public int getNumber() {
-        return number;
-    }
-
-    public void setNumber(int number) {
-        this.number = number;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public List<WaypointGroup> getTracksegs() {
-        return tracksegs;
-    }
-
-    public void setTracksegs(List<WaypointGroup> tracksegs) {
-        this.tracksegs = tracksegs;
-    }
-
-    public long getDuration() {
-        return duration;
-    }
-
-    public double getMaxSpeedKmph() {
-        return maxSpeedKmph;
-    }
-
-    public double getMaxSpeedMph() {
-        return maxSpeedMph;
-    }
-
-    public double getLengthMeters() {
-        return lengthMeters;
-    }
-    
-    public double getLengthMiles() {
-        return lengthMiles;
-    }
-
-    public double getEleStartMeters() {
-        return eleStartMeters;
-    }
-
-    public double getEleStartFeet() {
-        return eleStartFeet;
-    }
-
-    public double getEleEndMeters() {
-        return eleEndMeters;
-    }
-
-    public double getEleEndFeet() {
-        return eleEndFeet;
-    }
-
-    public double getEleMinMeters() {
-        return eleMinMeters;
-    }
-
-    public double getEleMinFeet() {
-        return eleMinFeet;
-    }
-
-    public double getEleMaxMeters() {
-        return eleMaxMeters;
-    }
-
-    public double getEleMaxFeet() {
-        return eleMaxFeet;
-    }
-
-    public double getGrossRiseFeet() {
-        return grossRiseFeet;
-    }
-
-    public double getGrossRiseMeters() {
-        return grossRiseMeters;
-    }
-
-    public double getGrossFallFeet() {
-        return grossFallFeet;
-    }
-
-    public double getGrossFallMeters() {
-        return grossFallMeters;
-    }
-
-    public long getRiseTime() {
-        return riseTime;
-    }
-
-    public long getFallTime() {
-        return fallTime;
     }
 }

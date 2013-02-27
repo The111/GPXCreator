@@ -46,7 +46,6 @@ public class GPXTreeComponentFactory {
     public GPXTreeComponent getComponent(JTree tree, Object value,
             boolean selected, boolean expanded, boolean leaf,
             int row, boolean hasFocus) {
-        
         JLabel visIcon = new JLabel();
         visIcon.setAlignmentX(JLabel.CENTER_ALIGNMENT);
         visIcon.setAlignmentY(JLabel.CENTER_ALIGNMENT);

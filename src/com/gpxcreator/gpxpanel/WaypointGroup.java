@@ -22,74 +22,56 @@ import org.openstreetmap.gui.jmapviewer.OsmMercator;
 
 public class WaypointGroup extends GPXObject {
 
-    private List<Waypoint> waypoints;
-    private boolean isPath;
-    private boolean isTrackseg;
-
-    private long duration;
-    private double maxSpeedKmph;
-    private double maxSpeedMph;
-    private double lengthMeters;
-    private double lengthMiles;
-    private double eleStartMeters;
-    private double eleStartFeet;
-    private double eleEndMeters;
-    private double eleEndFeet;
-    private double eleMinMeters;
-    private double eleMinFeet;
-    private double eleMaxMeters;
-    private double eleMaxFeet;
-    private double grossRiseFeet;
-    private double grossRiseMeters;
-    private double grossFallFeet;
-    private double grossFallMeters;
-    private long riseTime;
-    private long fallTime;
-    
-    public WaypointGroup(Color color, boolean isPath, boolean isTrackseg, boolean isRoute) {
-        super(color);
-        this.setPath(isPath);
-        if (!isPath) {
-            this.name = "Waypoints";
-        } else if (isTrackseg) {
-            this.name = "Track segment";
-        } else if (isRoute) {
-            this.name = "Route";
-        } else {
-            this.name = "Error";
-        }
-        waypoints = new ArrayList<Waypoint>();
+    public enum WptGrpType {
+        WAYPOINTS,
+        ROUTE,
+        TRACKSEG
     }
     
+    public enum EleCorrectedStatus {
+        CORRECTED,
+        FAILED,
+        CORRECTED_WITH_CLEANSE
+    }
+    
+    public enum EleCleansedStatus {
+        CLEANSED,
+        CANNOT_CLEANSE,
+        CLEANSE_UNNEEDED
+    }
+    
+    private WptGrpType wptGrpType;
+    private List<Waypoint> waypoints;
+    
+    public WaypointGroup(Color color, WptGrpType type) {
+        super(color);
+        switch (type) {
+            case WAYPOINTS:
+                this.name = "Waypoints";
+                break;
+            case ROUTE:
+                this.name = "Route";
+                break;
+            case TRACKSEG:
+                this.name = "Track segment";
+                break;
+        }
+        this.wptGrpType = type;
+        this.waypoints = new ArrayList<Waypoint>();
+    }
+    
+    public WptGrpType getWptGrpType() {
+        return wptGrpType;
+    }
+
+    public List<Waypoint> getWaypoints() {
+        return waypoints;
+    }
+
     public void addWaypoint(Waypoint wpt) {
         waypoints.add(wpt);
-        if (getNumPts() > 1) {
-            updateAllProperties(); // TODO make this less expensive?
-        }
-        updateBoundsQuick(wpt.getLat(), wpt.getLon());
     }
     
-    public void removeWaypoint(Waypoint wpt) {
-        waypoints.remove(wpt);
-        updateBounds();
-    }
-    
-    public boolean isPath() {
-        return isPath;
-    }
-
-    public void setPath(boolean isPath) {
-        this.isPath = isPath;
-    }
-
-    public boolean isTrackseg() {
-        return isTrackseg;
-    }
-
-    public void setTrackseg(boolean isTrackseg) {
-        this.isTrackseg = isTrackseg;
-    }
-
     public void addWaypoint(Waypoint wpt, boolean correctElevation) {
         if (correctElevation) {
             String url = "http://open.mapquestapi.com/elevation/v1/profile";
@@ -129,43 +111,36 @@ public class WaypointGroup extends GPXObject {
         }
         addWaypoint(wpt);
     }
-    
-    public List<Waypoint> getWaypoints() {
-        return waypoints;
+
+    public void removeWaypoint(Waypoint wpt) {
+        waypoints.remove(wpt);
+        updateBounds();
     }
 
-    public void setWaypoints(List<Waypoint> waypoints) {
-        this.waypoints = waypoints;
+    public int getNumPts() {
+        return waypoints.size();
     }
 
-    public static List<Double> getEleArrayFromXMLResponse(String xmlResponse) {
-        List<Double> ret = new ArrayList<Double>();
-        InputStream is = new ByteArrayInputStream(xmlResponse.getBytes());
-        XMLInputFactory xif = XMLInputFactory.newInstance();
-        try {
-            XMLStreamReader xsr = xif.createXMLStreamReader(is);
-            while (xsr.hasNext()) {
-                xsr.next();
-                if (xsr.getEventType() == XMLStreamReader.START_ELEMENT) {
-                    if (xsr.getLocalName().equals("height")) {
-                        xsr.next();
-                        if (xsr.isCharacters()) {
-                            ret.add(Double.parseDouble(xsr.getText()));
-                        }
-                    }
-                }
-            }
-            xsr.close();
-        }  catch (Exception e) {
-            System.err.println("There was a problem parsing the XML response.");
-            e.printStackTrace();
+    public Waypoint getStart() {
+        if (waypoints.size() > 0) {
+            return waypoints.get(0);
+        } else {
+            return null;
         }
-        return ret;
     }
-    
-    public boolean correctElevation() { // POST KVP (remember: had problems with POST XML and useFilter parameter)
+
+    public Waypoint getEnd() {
+        if (waypoints.size() > 0) {
+            return waypoints.get(waypoints.size() - 1);
+        } else {
+            return null;
+        }
+    }
+
+    // returns false if the query fails for any reason
+    public EleCorrectedStatus correctElevation(boolean doCleanse) { // POST KVP (remember: had problems with POST XML and useFilter parameter)
         if (waypoints.size() < 1) {
-            return true;
+            return EleCorrectedStatus.FAILED;
         }
         String latLngCollection = "";
         Waypoint rtept = getStart();
@@ -212,7 +187,7 @@ public class WaypointGroup extends GPXObject {
         String responseStr = builder.toString();
         
         if (responseStr.contains("Given Route exceeds the maximum allowed distance")) {
-            return false;
+            return EleCorrectedStatus.FAILED;
         } else {
             List<Double> eleList = getEleArrayFromXMLResponse(responseStr);
             if (eleList.size() == waypoints.size()) {
@@ -220,48 +195,134 @@ public class WaypointGroup extends GPXObject {
                     waypoints.get(i).setEle(eleList.get(i));
                 }
             } else {
-                return false;
+                return EleCorrectedStatus.FAILED;
             }
+            EleCleansedStatus cleanseStatus = EleCleansedStatus.CLEANSE_UNNEEDED;
+            if (doCleanse) {
+                cleanseStatus = cleanseEleData();
+            } 
             updateEleProps();
-            return true;
+            if (cleanseStatus == EleCleansedStatus.CLEANSED) {
+                return EleCorrectedStatus.CORRECTED_WITH_CLEANSE;
+            } else if (cleanseStatus == EleCleansedStatus.CANNOT_CLEANSE) {
+                return EleCorrectedStatus.FAILED;
+            } else {
+                return EleCorrectedStatus.CORRECTED;
+            }
         }
     }
+
+    public EleCleansedStatus cleanseEleData() {
+        boolean cleansed = false;
+        double eleStart = getStart().getEle();
+        double eleEnd = getEnd().getEle();
+
+        if (eleStart == -32768) {
+            cleansed = true;
+            for (int i = 0; i < waypoints.size(); i++) {
+                if (waypoints.get(i).getEle() != -32768) {
+                    eleStart = waypoints.get(i).getEle();
+                    break;
+                }
+            }
+        }
+        
+        if (eleEnd == -32768) {
+            cleansed = true;
+            for (int i = waypoints.size() - 1; i >= 0; i--) {
+                if (waypoints.get(i).getEle() != -32768) {
+                    eleEnd = waypoints.get(i).getEle();
+                    break;
+                }
+            }
+        }
+        
+        if (eleStart == -32768 && eleEnd == -32768) {
+            return EleCleansedStatus.CANNOT_CLEANSE; // hopeless! (impossible to correct)
+        }
+        
+        waypoints.get(0).setEle(eleStart);
+        waypoints.get(getNumPts() - 1).setEle(eleEnd);
+        
+        for (int i = 0; i < waypoints.size(); i++) {
+            if (waypoints.get(i).getEle() == -32768) {
+                cleansed = true;
+                Waypoint neighborBefore = null;
+                Waypoint neighborAfter = null;
+                double distBefore = 0;
+                double distAfter = 0;
+                
+                Waypoint curr = waypoints.get(i);
+                Waypoint prev = waypoints.get(i);
+                for (int j = i - 1; j >= 0; j--) {
+                    prev = curr;
+                    curr = waypoints.get(j);
+                    distBefore += OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
+                    if (waypoints.get(j).getEle() != -32768) {
+                        neighborBefore = waypoints.get(j);
+                        break;
+                    }
+                }
     
-    public int getNumPts() {
-        return waypoints.size();
-    }
-
-    public Waypoint getStart() {
-        if (waypoints.size() > 0) {
-            return waypoints.get(0);
+                curr = waypoints.get(i);
+                prev = waypoints.get(i);
+                for (int j = i + 1; j < waypoints.size(); j++) {
+                    prev = curr;
+                    curr = waypoints.get(j);
+                    distAfter += OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
+                    if (waypoints.get(j).getEle() != -32768) {
+                        neighborAfter = waypoints.get(j);
+                        break;
+                    }
+                }
+                
+                double distDiff = distBefore + distAfter;
+                double eleDiff = neighborAfter.getEle() - neighborBefore.getEle();
+                double eleCleansed = ((distBefore / distDiff) * eleDiff) + neighborBefore.getEle();
+                
+                waypoints.get(i).setEle(eleCleansed);
+            }
+        }
+        if (cleansed) {
+            return EleCleansedStatus.CLEANSED;
         } else {
-            return null;
+            return EleCleansedStatus.CLEANSE_UNNEEDED;
         }
     }
 
-    public Waypoint getEnd() {
-        if (waypoints.size() > 0) {
-            return waypoints.get(waypoints.size() - 1);
-        } else {
-            return null;
+    public static List<Double> getEleArrayFromXMLResponse(String xmlResponse) {
+        List<Double> ret = new ArrayList<Double>();
+        InputStream is = new ByteArrayInputStream(xmlResponse.getBytes());
+        XMLInputFactory xif = XMLInputFactory.newInstance();
+        try {
+            XMLStreamReader xsr = xif.createXMLStreamReader(is);
+            while (xsr.hasNext()) {
+                xsr.next();
+                if (xsr.getEventType() == XMLStreamReader.START_ELEMENT) {
+                    if (xsr.getLocalName().equals("height")) {
+                        xsr.next();
+                        if (xsr.isCharacters()) {
+                            ret.add(Double.parseDouble(xsr.getText()));
+                        }
+                    }
+                }
+            }
+            xsr.close();
+        }  catch (Exception e) {
+            System.err.println("There was a problem parsing the XML response.");
+            e.printStackTrace();
         }
+        return ret;
     }
 
+    @Override
     public void updateAllProperties() {
         if (waypoints.size() > 0) {
             updateDuration();
             updateLength();
             updateMaxSpeed();
             updateEleProps();
-        } else {
-            eleStartMeters = 0;
-            eleStartFeet = 0;
-            eleEndMeters = 0;
-            eleEndFeet = 0;
-            eleMinMeters = 0;
-            eleMinFeet = 0;
-            eleMaxMeters = 0;
-            eleMaxFeet = 0;
+            updateBounds();
         }
     }
     
@@ -292,7 +353,7 @@ public class WaypointGroup extends GPXObject {
         maxSpeedKmph = 0;
         double lengthKm;
         long millis;
-        double hours;
+        double hours;            // TODO find better filtering technique than the line below
         int smoothingFactor = 1; // find max speed over this many segments to smooth unreliable data and outliers
         if (getNumPts() <= smoothingFactor) {
             return;
@@ -356,94 +417,11 @@ public class WaypointGroup extends GPXObject {
         grossFallFeet = grossFallMeters * 3.28084;
     }
     
-    public long getDuration() {
-        return duration;
-    }
-
-    public double getMaxSpeedKmph() {
-        return maxSpeedKmph;
-    }
-
-    public double getMaxSpeedMph() {
-        return maxSpeedMph;
-    }
-
-    public double getLengthMeters() {
-        return lengthMeters;
-    }
-    
-    public double getLengthMiles() {
-        return lengthMiles;
-    }
-
-    public double getEleStartMeters() {
-        return eleStartMeters;
-    }
-
-    public double getEleStartFeet() {
-        return eleStartFeet;
-    }
-
-    public double getEleEndMeters() {
-        return eleEndMeters;
-    }
-
-    public double getEleEndFeet() {
-        return eleEndFeet;
-    }
-
-    public double getEleMinMeters() {
-        return eleMinMeters;
-    }
-
-    public double getEleMinFeet() {
-        return eleMinFeet;
-    }
-
-    public double getEleMaxMeters() {
-        return eleMaxMeters;
-    }
-
-    public double getEleMaxFeet() {
-        return eleMaxFeet;
-    }
-
-    public double getGrossRiseFeet() {
-        return grossRiseFeet;
-    }
-
-    public double getGrossRiseMeters() {
-        return grossRiseMeters;
-    }
-
-    public double getGrossFallFeet() {
-        return grossFallFeet;
-    }
-
-    public double getGrossFallMeters() {
-        return grossFallMeters;
-    }
-
-    public long getRiseTime() {
-        return riseTime;
-    }
-
-    public long getFallTime() {
-        return fallTime;
-    }
-
-    public void updateBoundsQuick(double lat, double lon) {
-        minLat = Math.min(minLat, lat);
-        maxLat = Math.max(maxLat, lat);
-        minLon = Math.min(minLon, lon);
-        maxLon = Math.max(maxLon, lon);
-    }
-    
     public void updateBounds() {
-        minLat = Double.MAX_VALUE;
-        minLon = Double.MAX_VALUE;
-        maxLat = -Double.MAX_VALUE;
-        maxLon = -Double.MAX_VALUE;
+        minLat =  86;
+        maxLat = -86;
+        minLon =  180;
+        maxLon = -180;
         for (Waypoint wpt : waypoints) {
             minLat = Math.min(minLat, wpt.getLat());
             minLon = Math.min(minLon, wpt.getLon());

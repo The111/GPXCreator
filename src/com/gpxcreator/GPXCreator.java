@@ -88,6 +88,8 @@ import com.gpxcreator.gpxpanel.Route;
 import com.gpxcreator.gpxpanel.Track;
 import com.gpxcreator.gpxpanel.Waypoint;
 import com.gpxcreator.gpxpanel.WaypointGroup;
+import com.gpxcreator.gpxpanel.WaypointGroup.EleCorrectedStatus;
+import com.gpxcreator.gpxpanel.WaypointGroup.WptGrpType;
 import com.gpxcreator.tree.GPXTreeEditor;
 import com.gpxcreator.tree.GPXTreeRenderer;
 
@@ -578,7 +580,7 @@ public class GPXCreator extends JComponent {
                         Route route = (Route) activeGPXObject;
                         route.getPath().addWaypoint(wpt, false);
                     } else if (activeGPXObject.getClass().equals(WaypointGroup.class)
-                            && !((WaypointGroup) activeGPXObject).isPath()) {
+                            && ((WaypointGroup) activeGPXObject).getWptGrpType() == WptGrpType.WAYPOINTS) {
                         WaypointGroup wptGrp = (WaypointGroup) activeGPXObject;
                         wptGrp.addWaypoint(wpt, false);
                     }
@@ -633,7 +635,7 @@ public class GPXCreator extends JComponent {
                         }
                     } else if (activeGPXObject.getClass().equals(Track.class)
                             || (activeGPXObject.getClass().equals(WaypointGroup.class)
-                                && ((WaypointGroup) activeGPXObject).isTrackseg())) {
+                                && ((WaypointGroup) activeGPXObject).getWptGrpType() == WptGrpType.TRACKSEG)) {
                         JOptionPane.showMessageDialog(frame,
                                 "<html>GPX Creator cannot add points to a track or track segment.<br>" +
                                 "A GPS logger should be used instead.<br></html>",
@@ -759,13 +761,21 @@ public class GPXCreator extends JComponent {
                 if (activeGPXObject != null) {
                     WaypointGroup wptGrp = getActiveWptGrp();
                     if (wptGrp != null) {
-                        boolean corrected = wptGrp.correctElevation();
-                        if (!corrected) {
+                        EleCorrectedStatus corrected = wptGrp.correctElevation(true);
+                        if (corrected == EleCorrectedStatus.FAILED) {
                             JOptionPane.showMessageDialog(frame,
-                                    "<html>There was a problem correcting the elevation.<br>" +
-                                    "Try again with a shorter path.</html>",
+                                    "<html>There was a problem correcting the elevation.  Possible causes:<br>" +
+                                    " - an empty set of points was submitted<br>" +
+                                    " - the route/track submitted was too long (limit of ~150 miles)<br>" +
+                                    " - the response from the server contained errors or was empty</html>",
                                     "Error",
                                     JOptionPane.ERROR_MESSAGE);
+                        } else if (corrected == EleCorrectedStatus.CORRECTED_WITH_CLEANSE) {
+                            JOptionPane.showMessageDialog(frame,
+                                    "<html>The elevation response from the server had missing data segments.<br>" +
+                                    "These have been filled in by linear interpolation.</html>",
+                                    "Information",
+                                    JOptionPane.INFORMATION_MESSAGE);
                         }
                     }
                     resetRoutePropsTable();
@@ -1101,6 +1111,7 @@ public class GPXCreator extends JComponent {
     }
     
     public void fileOpen() {
+        chooserFileOpen.setSize(mapPanel.getWidth(), mapPanel.getHeight());
         int returnVal = chooserFileOpen.showOpenDialog(mapPanel);
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             fileOpened = chooserFileOpen.getSelectedFile();
@@ -1179,7 +1190,7 @@ public class GPXCreator extends JComponent {
                 } else if (activeGPXObject.getClass().equals(Track.class)) { // this is a track
                     ((GPXFile) parentObject).getTracks().remove((Track) activeGPXObject);
                 } else if (activeGPXObject.getClass().equals(WaypointGroup.class)) {
-                    if (((WaypointGroup) currentNode.getUserObject()).isPath()) { // this is a track segment
+                    if (((WaypointGroup) currentNode.getUserObject()).getWptGrpType() == WptGrpType.TRACKSEG) { // track seg
                         ((Track) parentObject).getTracksegs().remove((WaypointGroup) currentNode.getUserObject());
                     } else { // this is a top-level waypoint group
                         ((GPXFile) parentObject).getWaypointGroup().getWaypoints().clear();
@@ -1285,14 +1296,14 @@ public class GPXCreator extends JComponent {
                 }
             } else if (activeGPXObject.getClass().equals(WaypointGroup.class)) {
                 WaypointGroup wptGrp = (WaypointGroup) activeGPXObject;
-                if (!wptGrp.isPath()) { // this is a top level waypoint collection
+                if (wptGrp.getWptGrpType() == WptGrpType.WAYPOINTS) { // this is a top level waypoint collection
                     tableModelRouteProps.addRow(new Object[]{"waypoints", wptGrp.getWaypoints().size()});
                     tableModelRouteProps.addRow(
                             new Object[]{"min elevation", String.format("%.0f ft", wptGrp.getEleMinFeet())});
                     tableModelRouteProps.addRow(
                             new Object[]{"max elevation", String.format("%.0f ft", wptGrp.getEleMaxFeet())});
                     
-                } else if (wptGrp.isTrackseg()) { // this is a trackseg
+                } else if (wptGrp.getWptGrpType() == WptGrpType.TRACKSEG) { // this is a trackseg
                     Track trk = (Track) parentObject;
                     propsDisplayTrackseg(trk, wptGrp);
                 }
@@ -1357,6 +1368,18 @@ public class GPXCreator extends JComponent {
         }
         double lengthMiles = path.getLengthMiles();
         tableModelRouteProps.addRow(new Object[]{"length", String.format("%.2f mi", lengthMiles)});
+        
+        double avgSpeedMph = (lengthMiles / duration) * 3600000;
+        if (Double.isNaN(avgSpeedMph) || Double.isInfinite(avgSpeedMph)) {
+            avgSpeedMph = 0;
+        }
+        if (avgSpeedMph != 0) {
+            tableModelRouteProps.addRow(new Object[]{"avg speed", String.format("%.1f mph", avgSpeedMph)});
+        }
+        if (path.getMaxSpeedMph() != 0) {
+            tableModelRouteProps.addRow(new Object[]{"max speed", String.format("%.1f mph", path.getMaxSpeedMph())});            
+        }
+        
         tableModelRouteProps.addRow(
                 new Object[]{"elevation (start)", String.format("%.0f ft", path.getEleStartFeet())});
         tableModelRouteProps.addRow(
@@ -1369,16 +1392,6 @@ public class GPXCreator extends JComponent {
         double grossFallFeet = path.getGrossFallFeet();
         tableModelRouteProps.addRow(new Object[]{"gross rise", String.format("%.0f ft", grossRiseFeet)});
         tableModelRouteProps.addRow(new Object[]{"gross fall", String.format("%.0f ft", grossFallFeet)});
-        double avgSpeedMph = (lengthMiles / duration) * 3600000;
-        if (Double.isNaN(avgSpeedMph) || Double.isInfinite(avgSpeedMph)) {
-            avgSpeedMph = 0;
-        }
-        if (avgSpeedMph != 0) {
-            tableModelRouteProps.addRow(new Object[]{"avg speed", String.format("%.1f mph", avgSpeedMph)});
-        }
-        if (path.getMaxSpeedMph() != 0) {
-            tableModelRouteProps.addRow(new Object[]{"max speed", String.format("%.1f mph", path.getMaxSpeedMph())});            
-        }
         
         long riseTime = path.getRiseTime();
         hours = riseTime / 3600000;

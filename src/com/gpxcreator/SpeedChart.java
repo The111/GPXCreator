@@ -18,12 +18,11 @@ import org.openstreetmap.gui.jmapviewer.OsmMercator;
 
 import com.gpxcreator.gpxpanel.Waypoint;
 import com.gpxcreator.gpxpanel.WaypointGroup;
-import com.gpxcreator.gpxpanel.WaypointGroup.WptGrpType;
 
 @SuppressWarnings("serial")
-public class ElevationChart extends JFrame {
+public class SpeedChart extends JFrame {
 
-    public ElevationChart(String title, String headingPrefix, WaypointGroup wptGrp) {
+    public SpeedChart(String title, String headingPrefix, WaypointGroup wptGrp) {
         super(title);
         XYDataset xydataset = createDataset(wptGrp);
         JFreeChart jfreechart = createChart(xydataset, wptGrp, headingPrefix);
@@ -46,12 +45,15 @@ public class ElevationChart extends JFrame {
         for (Waypoint wpt : wptGrp.getWaypoints()) {
             prev = curr;
             curr = wpt;
-            double increment = OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
-            if (!Double.isNaN(increment)) {
-                lengthMeters += increment;
+            double incrementMeters = OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
+            double incrementMillis = curr.getTime().getTime() - prev.getTime().getTime();
+            double incrementHours = incrementMillis / 3600000D;
+            if (!Double.isNaN(incrementMeters)) {
+                lengthMeters += incrementMeters;
                 lengthMiles = lengthMeters * 0.000621371;
             }
-            xyseries.add(new Double(lengthMiles), new Double(curr.getEle() * 3.28084));
+            double incrementMiles = incrementMeters * 0.000621371;
+            xyseries.add(new Double(lengthMiles), new Double(incrementMiles / incrementHours));
         }
         XYSeriesCollection xyseriescollection = new XYSeriesCollection();
         xyseriescollection.addSeries(xyseries);
@@ -61,15 +63,9 @@ public class ElevationChart extends JFrame {
     
     private static JFreeChart createChart(XYDataset xydataset, WaypointGroup wptGrp, String headingPrefix) {
         JFreeChart jfreechart = null;
-        if (wptGrp.getWptGrpType() == WptGrpType.WAYPOINTS) {
-            jfreechart = ChartFactory.createScatterPlot(
-                    headingPrefix + " - " + wptGrp.getName(), "Distance (miles)", "Elevation (ft)",
-                    xydataset, PlotOrientation.VERTICAL, false, false, false);
-        } else {
-            jfreechart = ChartFactory.createXYAreaChart(
-                headingPrefix + " - " + wptGrp.getName(), "Distance (miles)", "Elevation (ft)",
-                xydataset, PlotOrientation.VERTICAL, false, false, false);
-        }
+        jfreechart = ChartFactory.createXYAreaChart(
+            headingPrefix + " - " + wptGrp.getName(), "Distance (miles)", "Speed (mph)",
+            xydataset, PlotOrientation.VERTICAL, false, false, false);
         
         XYPlot xyplot = (XYPlot)jfreechart.getPlot();
         xyplot.getRenderer().setSeriesPaint(0, new Color(38, 128, 224));
@@ -78,17 +74,11 @@ public class ElevationChart extends JFrame {
         ValueAxis domainAxis = xyplot.getDomainAxis();
         domainAxis.setRange(0, wptGrp.getLengthMiles());
         
-        double eleMin = wptGrp.getEleMinFeet();
-        double eleMax = wptGrp.getEleMaxFeet();
-        double eleChange = eleMax - eleMin;
-        double padding = eleChange / 10D;
-        double rangeMin = eleMin - padding;
-        if (eleMin >= 0 & rangeMin < 0) {
-            rangeMin = 0;
-        }
-        double rangeMax = eleMax + padding;
+        double speedMax = wptGrp.getMaxSpeedMph();
+        double padding = speedMax / 10D;
+        double rangeMax = speedMax + padding;
         ValueAxis rangeAxis = xyplot.getRangeAxis();
-        rangeAxis.setRange(rangeMin, rangeMax);
+        rangeAxis.setRange(0, rangeMax);
 
         domainAxis.setTickMarkPaint(Color.black);
         domainAxis.setLowerMargin(0.0D);
