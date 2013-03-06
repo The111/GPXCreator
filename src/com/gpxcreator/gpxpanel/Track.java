@@ -98,9 +98,16 @@ public class Track extends GPXObject {
             maxLon = Math.max(maxLon, trackseg.getMaxLon());
         }
         
-        eleStartMeters = tracksegs.get(0).getEleStartMeters();
-        eleStartFeet = tracksegs.get(0).getEleStartFeet();
-        eleEndMeters = tracksegs.get(tracksegs.size() - 1).getEleEndMeters();
-        eleEndFeet = tracksegs.get(tracksegs.size() - 1).getEleEndFeet();
+        if (tracksegs.size() > 0) {
+            eleStartMeters = tracksegs.get(0).getEleStartMeters();
+            eleStartFeet = tracksegs.get(0).getEleStartFeet();
+            eleEndMeters = tracksegs.get(tracksegs.size() - 1).getEleEndMeters();
+            eleEndFeet = tracksegs.get(tracksegs.size() - 1).getEleEndFeet();
+        } else {
+            eleStartMeters = 0;
+            eleStartFeet = 0;
+            eleEndMeters = 0;
+            eleEndFeet = 0;
+        }
     }
 }

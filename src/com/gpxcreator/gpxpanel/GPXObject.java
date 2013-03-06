@@ -2,6 +2,8 @@ package com.gpxcreator.gpxpanel;
 
 import java.awt.Color;
 
+import com.gpxcreator.gpxpanel.WaypointGroup.WptGrpType;
+
 public abstract class GPXObject {
     public abstract void updateAllProperties();
     
@@ -48,11 +50,6 @@ public abstract class GPXObject {
         this.visible = true;
         this.wptsVisible = true;
         this.color = Color.white;
-        
-        this.eleMinMeters = Integer.MAX_VALUE;
-        this.eleMinFeet = Integer.MAX_VALUE;
-        this.eleMaxMeters = Integer.MIN_VALUE;
-        this.eleMaxFeet = Integer.MIN_VALUE;
         
         this.minLat =  86;
         this.maxLat = -86;
@@ -204,4 +201,56 @@ public abstract class GPXObject {
     public long getFallTime() {
         return fallTime;
     }
+    
+    public boolean isGPXFile() {
+        return getClass().equals(GPXFile.class);
+    }
+    
+    public boolean isGPXFileWithOneRoute() {
+        return (isGPXFile() && ((GPXFile) this).getRoutes().size() == 1);
+    }
+    
+    public boolean isGPXFileWithOneRouteOnly() {
+        return (isGPXFile() && ((GPXFile) this).getRoutes().size() == 1 && ((GPXFile) this).getTracks().size() == 0);
+    }
+    
+    public boolean isGPXFileWithNoRoutes() {
+        return (isGPXFile() && ((GPXFile) this).getRoutes().size() == 0);
+    }
+    
+    public boolean isGPXFileWithOneTrackseg() {
+        return (isGPXFile() && ((GPXFile) this).getTracks().size() == 1
+                && ((GPXFile) this).getTracks().get(0).getTracksegs().size() == 1);
+    }
+    
+    public boolean isGPXFileWithOneTracksegOnly() {
+        return (isGPXFile() && ((GPXFile) this).getTracks().size() == 1
+                && ((GPXFile) this).getTracks().get(0).getTracksegs().size() == 1
+                && ((GPXFile) this).getRoutes().size() == 0);
+    }
+    
+    public boolean isWaypoints() {
+        return (isWaypointGroup() && ((WaypointGroup) this).getWptGrpType() == WptGrpType.WAYPOINTS);
+    }
+    
+    public boolean isRoute() {
+        return getClass().equals(Route.class);
+    }
+    
+    public boolean isTrack() {
+        return getClass().equals(Track.class);
+    }
+    
+    public boolean isTrackWithOneSeg() {
+        return (isTrack() && ((Track) this).getTracksegs().size() == 1);
+    }
+    
+    public boolean isTrackseg() {
+        return (isWaypointGroup() && ((WaypointGroup) this).getWptGrpType() == WptGrpType.TRACKSEG);
+    }
+    
+    public boolean isWaypointGroup() {
+        return getClass().equals(WaypointGroup.class);
+    }
+
 }

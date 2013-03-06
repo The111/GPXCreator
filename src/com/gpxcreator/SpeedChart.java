@@ -1,5 +1,6 @@
 package com.gpxcreator;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.RenderingHints;
 
@@ -21,9 +22,12 @@ import com.gpxcreator.gpxpanel.WaypointGroup;
 
 @SuppressWarnings("serial")
 public class SpeedChart extends JFrame {
+    
+    private double maxRawSpeedMph;
 
     public SpeedChart(String title, String headingPrefix, WaypointGroup wptGrp) {
         super(title);
+        maxRawSpeedMph = 0;
         XYDataset xydataset = createDataset(wptGrp);
         JFreeChart jfreechart = createChart(xydataset, wptGrp, headingPrefix);
         jfreechart.setRenderingHints(
@@ -36,7 +40,7 @@ public class SpeedChart extends JFrame {
         setContentPane(chartpanel);
     }
 
-    private static XYDataset createDataset(WaypointGroup wptGrp) {
+    private XYDataset createDataset(WaypointGroup wptGrp) {
         XYSeries xyseries = new XYSeries(wptGrp.getName());
         double lengthMeters = 0;
         double lengthMiles = 0;
@@ -48,12 +52,14 @@ public class SpeedChart extends JFrame {
             double incrementMeters = OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
             double incrementMillis = curr.getTime().getTime() - prev.getTime().getTime();
             double incrementHours = incrementMillis / 3600000D;
-            if (!Double.isNaN(incrementMeters)) {
+            if (!Double.isNaN(incrementMeters) && !Double.isNaN(incrementMillis) && incrementHours > 0) {
                 lengthMeters += incrementMeters;
                 lengthMiles = lengthMeters * 0.000621371;
+                double incrementMiles = incrementMeters * 0.000621371;
+                Double speedMph = new Double(incrementMiles / incrementHours);
+                xyseries.add(new Double(lengthMiles), speedMph);
+                maxRawSpeedMph = Math.max(speedMph, maxRawSpeedMph);
             }
-            double incrementMiles = incrementMeters * 0.000621371;
-            xyseries.add(new Double(lengthMiles), new Double(incrementMiles / incrementHours));
         }
         XYSeriesCollection xyseriescollection = new XYSeriesCollection();
         xyseriescollection.addSeries(xyseries);
@@ -61,22 +67,22 @@ public class SpeedChart extends JFrame {
         return xyseriescollection;
     }
     
-    private static JFreeChart createChart(XYDataset xydataset, WaypointGroup wptGrp, String headingPrefix) {
+    private JFreeChart createChart(XYDataset xydataset, WaypointGroup wptGrp, String headingPrefix) {
         JFreeChart jfreechart = null;
-        jfreechart = ChartFactory.createXYAreaChart(
+        jfreechart = ChartFactory.createXYLineChart(
             headingPrefix + " - " + wptGrp.getName(), "Distance (miles)", "Speed (mph)",
             xydataset, PlotOrientation.VERTICAL, false, false, false);
         
         XYPlot xyplot = (XYPlot)jfreechart.getPlot();
-        xyplot.getRenderer().setSeriesPaint(0, new Color(38, 128, 224));
+        xyplot.getRenderer().setSeriesPaint(0, new Color(255, 0, 0));
         xyplot.setForegroundAlpha(0.65F);
+        xyplot.getRenderer().setSeriesStroke(0, new BasicStroke(2.0f));
         
         ValueAxis domainAxis = xyplot.getDomainAxis();
         domainAxis.setRange(0, wptGrp.getLengthMiles());
         
-        double speedMax = wptGrp.getMaxSpeedMph();
-        double padding = speedMax / 10D;
-        double rangeMax = speedMax + padding;
+        double padding = maxRawSpeedMph / 10D;
+        double rangeMax = maxRawSpeedMph + padding;
         ValueAxis rangeAxis = xyplot.getRangeAxis();
         rangeAxis.setRange(0, rangeMax);
 

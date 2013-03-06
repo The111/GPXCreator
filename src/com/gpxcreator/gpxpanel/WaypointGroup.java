@@ -68,6 +68,10 @@ public class WaypointGroup extends GPXObject {
         return waypoints;
     }
 
+    public void setWaypoints(List<Waypoint> waypoints) {
+        this.waypoints = waypoints;
+    }
+
     public void addWaypoint(Waypoint wpt) {
         waypoints.add(wpt);
     }
@@ -353,8 +357,9 @@ public class WaypointGroup extends GPXObject {
         maxSpeedKmph = 0;
         double lengthKm;
         long millis;
-        double hours;            // TODO find better filtering technique than the line below
-        int smoothingFactor = 1; // find max speed over this many segments to smooth unreliable data and outliers
+        double hours; 
+                                 // TODO replace this cheap smoothing method below with a Kalman filter?
+        int smoothingFactor = 5; // find max avg speed over this many segments to smooth unreliable data and outliers
         if (getNumPts() <= smoothingFactor) {
             return;
         }
@@ -363,8 +368,14 @@ public class WaypointGroup extends GPXObject {
         for (int i = smoothingFactor; i < getNumPts(); i++)  {
             segEnd = waypoints.get(i);
             segStart = waypoints.get(i - smoothingFactor);
-            lengthKm = OsmMercator.getDistance(
-                    segStart.getLat(), segStart.getLon(), segEnd.getLat(), segEnd.getLon()) / 1000;
+            
+            lengthKm = 0;
+            for (int j = 0; j < smoothingFactor; j++) {
+                Waypoint w1 = waypoints.get(i - j);
+                Waypoint w2 = waypoints.get(i - j - 1);
+                lengthKm += OsmMercator.getDistance(w1.getLat(), w1.getLon(), w2.getLat(), w2.getLon()) / 1000;
+            }
+            
             Date startTime = getEnd().getTime();
             Date endTime = getEnd().getTime();
             if (startTime != null && endTime != null) {

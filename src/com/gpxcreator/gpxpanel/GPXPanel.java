@@ -1,11 +1,13 @@
 package com.gpxcreator.gpxpanel;
 
+import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
 import java.awt.event.MouseEvent;
@@ -38,6 +40,7 @@ public class GPXPanel extends JMapViewer {
     private double crosshairLon;
     private boolean showCrosshair;
     private Point shownPoint;
+    private Color activeColor;
 
     public GPXPanel() {
         super(new MemoryTileCache(), 16);
@@ -110,12 +113,35 @@ public class GPXPanel extends JMapViewer {
         if (shownPoint != null) {
             Stroke saveStroke = g2d.getStroke();
             Color saveColor = g2d.getColor();
-            g2d.setStroke(new BasicStroke(5.5f));
+            
+            // square mark (with transparency)
             g2d.setColor(Color.black);
-            g2d.drawOval(shownPoint.x - 9, shownPoint.y - 9, 17, 17);
+            g2d.drawRect(shownPoint.x - 9, shownPoint.y - 9, 17, 17);
+            g2d.setColor(Color.white);
+            g2d.drawRect(shownPoint.x - 8, shownPoint.y - 8, 15, 15);
+            g2d.setColor(Color.black);
+            g2d.drawRect(shownPoint.x - 7, shownPoint.y - 7, 13, 13);
+            int red = activeColor.getRed();
+            int green = activeColor.getGreen();
+            int blue = activeColor.getBlue();
+            AlphaComposite ac = AlphaComposite.SrcOver;
+            g2d.setComposite(ac);
+            g2d.setColor(new Color(255 - red, 255 - green, 255 - blue, 160));
+            g2d.fill(new Rectangle(shownPoint.x - 6, shownPoint.y - 6, 11, 11));
+            
+            // X mark
+            /*g2d.setStroke(new BasicStroke(5.5f));
+            g2d.setColor(Color.black);
+            g2d.drawLine(shownPoint.x - 8, shownPoint.y - 8, shownPoint.x + 8, shownPoint.y + 8);
+            g2d.drawLine(shownPoint.x - 8, shownPoint.y + 8, shownPoint.x + 8, shownPoint.y - 8);
             g2d.setStroke(new BasicStroke(3));
-            g2d.setColor(Color.yellow);
-            g2d.drawOval(shownPoint.x -  9, shownPoint.y -  9, 17, 17);
+            int red = activeColor.getRed();
+            int green = activeColor.getGreen();
+            int blue = activeColor.getBlue();
+            g2d.setColor(new Color(255 - red, 255 - green, 255 - blue));
+            g2d.drawLine(shownPoint.x - 8, shownPoint.y - 8, shownPoint.x + 8, shownPoint.y + 8);
+            g2d.drawLine(shownPoint.x - 8, shownPoint.y + 8, shownPoint.x + 8, shownPoint.y - 8);*/
+            
             g2d.setStroke(saveStroke);
             g2d.setColor(saveColor);
         }
@@ -282,5 +308,13 @@ public class GPXPanel extends JMapViewer {
 
     public void setShownPoint(Point shownPoint) {
         this.shownPoint = shownPoint;
+    }
+
+    public Color getActiveColor() {
+        return activeColor;
+    }
+
+    public void setActiveColor(Color activeColor) {
+        this.activeColor = activeColor;
     }
 }

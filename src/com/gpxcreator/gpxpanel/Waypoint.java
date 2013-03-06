@@ -42,6 +42,9 @@ public class Waypoint {
     }
 
     public void setEle(double ele) {
+        /*if (ele == -32768 && this.ele != 0) { // if SRTM data is missing, and GPS logged data exists, leave it as is
+            return;
+        }*/
         this.ele = ele;
     }
 

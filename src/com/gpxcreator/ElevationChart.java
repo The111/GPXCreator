@@ -37,7 +37,7 @@ public class ElevationChart extends JFrame {
         setContentPane(chartpanel);
     }
 
-    private static XYDataset createDataset(WaypointGroup wptGrp) {
+    private XYDataset createDataset(WaypointGroup wptGrp) {
         XYSeries xyseries = new XYSeries(wptGrp.getName());
         double lengthMeters = 0;
         double lengthMiles = 0;
@@ -59,7 +59,7 @@ public class ElevationChart extends JFrame {
         return xyseriescollection;
     }
     
-    private static JFreeChart createChart(XYDataset xydataset, WaypointGroup wptGrp, String headingPrefix) {
+    private JFreeChart createChart(XYDataset xydataset, WaypointGroup wptGrp, String headingPrefix) {
         JFreeChart jfreechart = null;
         if (wptGrp.getWptGrpType() == WptGrpType.WAYPOINTS) {
             jfreechart = ChartFactory.createScatterPlot(
