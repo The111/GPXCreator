@@ -101,7 +101,7 @@ import com.gpxcreator.tree.GPXTreeRenderer;
 @SuppressWarnings("serial")
 public class GPXCreator extends JComponent {
     
-    // temporary ghetto indent style to show layout hierarchy
+    // indents show layout hierarchy
     private JFrame frame;
         private JToolBar toolBarMain;       // NORTH
             private JButton btnFileNew;    
@@ -213,6 +213,7 @@ public class GPXCreator extends JComponent {
         splitPaneMain.addPropertyChangeListener(new PropertyChangeListener() {
             @Override
             public void propertyChange(PropertyChangeEvent evt) {
+                // must be scheduled with invokeLater, or if user moves divider fast enough, the update won't happen 
                 SwingUtilities.invokeLater(new Runnable() {
                     @Override
                     public void run() {
@@ -630,10 +631,8 @@ public class GPXCreator extends JComponent {
                     
                     if (activeGPXObject.isGPXFileWithNoRoutes()) {
                         Route route = ((GPXFile) activeGPXObject).addRoute();
-                        DefaultMutableTreeNode selected =
-                                (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
                         DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(route);
-                        treeModel.insertNodeInto(newNode, selected, 0);
+                        treeModel.insertNodeInto(newNode, currSelection, 0);
                         updateButtonVisibility();
                     }
                 } else {
@@ -1120,9 +1119,9 @@ public class GPXCreator extends JComponent {
         toolBarMain.addSeparator();
         toolBarMain.add(debug);
         
-        /*java.util.Properties systemProperties = System.getProperties();
+        java.util.Properties systemProperties = System.getProperties();
         systemProperties.setProperty("http.proxyHost", "proxy1.lmco.com");
-        systemProperties.setProperty("http.proxyPort", "80");*/
+        systemProperties.setProperty("http.proxyPort", "80");
     }
     
     public void fileNew() {
@@ -1133,16 +1132,14 @@ public class GPXCreator extends JComponent {
             gpxFile.addRoute();
 
             mapPanel.addGPXFile(gpxFile);
-            DefaultMutableTreeNode node = new DefaultMutableTreeNode(gpxFile);
-            root.add(node);
-            node.add(new DefaultMutableTreeNode(gpxFile.getRoutes().get(0)));
+            DefaultMutableTreeNode gpxFileNode = new DefaultMutableTreeNode(gpxFile);
             
-            int[] ints = {root.getIndex(node)};
-            treeModel.nodesWereInserted(root, ints); // TODO fix
+            treeModel.insertNodeInto(gpxFileNode, root, root.getChildCount());
+            treeModel.insertNodeInto(new DefaultMutableTreeNode(gpxFile.getRoutes().get(0)), gpxFileNode, 0);
+            
             setActiveGPXObject((GPXObject) gpxFile);
-            TreeNode[] nodes = treeModel.getPathToRoot(node);
-            tree.setSelectionPath(new TreePath(nodes));
-            
+            TreeNode[] pathToFileNode = treeModel.getPathToRoot(gpxFileNode);
+            tree.setSelectionPath(new TreePath(pathToFileNode));
             tree.scrollRectToVisible(new Rectangle(0, 999999999, 1, 1));
         }
     }
@@ -1152,51 +1149,47 @@ public class GPXCreator extends JComponent {
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             fileOpened = chooserFileOpen.getSelectedFile();
             boolean valid = GPXFile.validateGPXFile(fileOpened);
-            // TODO re-enable validation warnings
             if (!valid) {
-                /*JOptionPane.showMessageDialog(frame,
+                JOptionPane.showMessageDialog(frame,
                         "<html>The selected file does not validate against the GPX schema version 1.1.<br>" +
                         "There is a chance that the file will not load properly.</html>",
                         "Warning",
-                        JOptionPane.WARNING_MESSAGE);*/
+                        JOptionPane.WARNING_MESSAGE);
             }
-            GPXFile file = new GPXFile(fileOpened);
-            mapPanel.addGPXFile(file);
+            GPXFile gpxFile = new GPXFile(fileOpened);
+            mapPanel.addGPXFile(gpxFile);
             
-            DefaultMutableTreeNode node = new DefaultMutableTreeNode(file); 
-            ((DefaultMutableTreeNode)treeModel.getRoot()).add(node);
-            if (file.getWaypointGroup().getWaypoints().size() > 0) {
-                DefaultMutableTreeNode wpts = new DefaultMutableTreeNode(file.getWaypointGroup());
-                node.add(wpts);
+            DefaultMutableTreeNode gpxFileNode = new DefaultMutableTreeNode(gpxFile);
+            treeModel.insertNodeInto(gpxFileNode, root, root.getChildCount());
+            if (gpxFile.getWaypointGroup().getWaypoints().size() > 0) {
+                DefaultMutableTreeNode wptsNode = new DefaultMutableTreeNode(gpxFile.getWaypointGroup());
+                treeModel.insertNodeInto(wptsNode, gpxFileNode, gpxFileNode.getChildCount());
             }
-            for (Route route : file.getRoutes()) {
-                DefaultMutableTreeNode rte = new DefaultMutableTreeNode(route);
-                node.add(rte);
+            for (Route route : gpxFile.getRoutes()) {
+                DefaultMutableTreeNode rteNode = new DefaultMutableTreeNode(route);
+                treeModel.insertNodeInto(rteNode, gpxFileNode, gpxFileNode.getChildCount());
             }
-            for (Track track : file.getTracks()) {
-                DefaultMutableTreeNode trk = new DefaultMutableTreeNode(track);
-                node.add(trk);
+            for (Track track : gpxFile.getTracks()) {
+                DefaultMutableTreeNode trkNode = new DefaultMutableTreeNode(track);
+                treeModel.insertNodeInto(trkNode, gpxFileNode, gpxFileNode.getChildCount());
                 for (WaypointGroup trackseg : track.getTracksegs()) {
-                    DefaultMutableTreeNode trkseg = new DefaultMutableTreeNode(trackseg);
-                    trk.add(trkseg);
+                    DefaultMutableTreeNode trksegNode = new DefaultMutableTreeNode(trackseg);
+                    treeModel.insertNodeInto(trksegNode, trkNode, trkNode.getChildCount());
                 }
             }
-            int[] ints = {root.getIndex(node)};
-            treeModel.nodesWereInserted(root, ints); // TODO fix
-            setActiveGPXObject((GPXObject) file);
-            TreeNode[] nodes = treeModel.getPathToRoot(node);
+            setActiveGPXObject((GPXObject) gpxFile);
+            TreeNode[] nodes = treeModel.getPathToRoot(gpxFileNode);
             tree.setSelectionPath(new TreePath(nodes));
-            
             tree.scrollRectToVisible(new Rectangle(0, 999999999, 1, 1));
         }
     }
     
     public void fileSave() {
-        //DefaultMutableTreeNode currentlySelected = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
         if (currSelection == null) {
             return;
         }
-        while (!currSelection.getUserObject().getClass().equals(GPXFile.class)) {
+
+        while (!((GPXObject) currSelection.getUserObject()).isGPXFile()) {
             currSelection = (DefaultMutableTreeNode) currSelection.getParent();
         }
         TreeNode[] nodes = treeModel.getPathToRoot(currSelection);
@@ -1211,7 +1204,7 @@ public class GPXCreator extends JComponent {
     
     public void deleteActiveGPXObject() {
         if (activeGPXObject != null) {
-            DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+            DefaultMutableTreeNode currentNode = currSelection;
             DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) currentNode.getParent();
             TreeNode[] parentPath = treeModel.getPathToRoot(parentNode);
             Object parentObject = parentNode.getUserObject();
@@ -1224,17 +1217,18 @@ public class GPXCreator extends JComponent {
             
             treeModel.removeNodeFromParent(currentNode);
             
-            if (activeGPXObject.getClass().equals(GPXFile.class)) { // this is a GPX file
+            if (activeGPXObject.isGPXFile()) { // this is a GPX file
                 mapPanel.removeGPXFile((GPXFile) activeGPXObject);
                 activeGPXObject = null;
                 clearRoutePropsTable();
             } else {
-                if (activeGPXObject.getClass().equals(Route.class)) { // this is a route
+                if (activeGPXObject.isRoute()) { // this is a route
                     ((GPXFile) parentObject).getRoutes().remove((Route) activeGPXObject);
-                } else if (activeGPXObject.getClass().equals(Track.class)) { // this is a track
+                } else if (activeGPXObject.isTrack()) { // this is a track
                     ((GPXFile) parentObject).getTracks().remove((Track) activeGPXObject);
-                } else if (activeGPXObject.getClass().equals(WaypointGroup.class)) {
-                    if (((WaypointGroup) currentNode.getUserObject()).getWptGrpType() == WptGrpType.TRACKSEG) { // track seg
+                } else if (activeGPXObject.isWaypointGroup()) {
+                    WaypointGroup wptGrp = (WaypointGroup) currentNode.getUserObject(); 
+                    if (wptGrp.getWptGrpType() == WptGrpType.TRACKSEG) { // track seg
                         ((Track) parentObject).getTracksegs().remove((WaypointGroup) currentNode.getUserObject());
                     } else { // this is a top-level waypoint group
                         ((GPXFile) parentObject).getWaypointGroup().getWaypoints().clear();
@@ -1252,7 +1246,6 @@ public class GPXCreator extends JComponent {
     }
     
     public void setActiveGPXObject(GPXObject gpxObject) {
-        tglLatLonFocus.setSelected(false);
         activeGPXObject = gpxObject;
         gpxObject.setVisible(true);
         mapPanel.fitGPXObjectToPanel(gpxObject);
@@ -1261,65 +1254,41 @@ public class GPXCreator extends JComponent {
     
     public void resetRoutePropsTable() {
         tableModelProperties.setRowCount(0);
-        DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
         
-        if (activeGPXObject.getClass().equals(GPXFile.class)) { // this is a GPX file
+        if (activeGPXObject.isGPXFile()) { // this is a GPX file
             GPXFile gpxFile = (GPXFile) activeGPXObject;
-            if (gpxFile.getRoutes().size() == 1 && gpxFile.getTracks().size() == 0) { // display single route details
-                tableModelProperties.addRow(new Object[]{"GPX name", gpxFile.getName()});
-                if (!gpxFile.getDesc().equals("")) {
-                    tableModelProperties.addRow(new Object[]{"GPX desc", gpxFile.getDesc()});
-                }
-                String timeString = "";
-                if (gpxFile.getTime() != null) {
-                    Date time = gpxFile.getTime();
-                    timeString = sdf.format(time);
-                }
-                tableModelProperties.addRow(new Object[]{"GPX time", timeString});
-                
+            tableModelProperties.addRow(new Object[]{"GPX name", gpxFile.getName()});
+            if (!gpxFile.getDesc().equals("")) {
+                tableModelProperties.addRow(new Object[]{"GPX desc", gpxFile.getDesc()});
+            }
+            String timeString = "";
+            if (gpxFile.getTime() != null) {
+                Date time = gpxFile.getTime();
+                timeString = sdf.format(time);
+            }
+            tableModelProperties.addRow(new Object[]{"GPX time", timeString});
+            
+            if (gpxFile.isGPXFileWithOneRouteOnly()) { // display single route details
                 Route rte = gpxFile.getRoutes().get(0);
                 propsDisplayRoute(rte);
-            } else if (gpxFile.getRoutes().size() == 0 && gpxFile.getTracks().size() == 1
-                    && gpxFile.getTracks().get(0).getTracksegs().size() == 1) { // display single track details
-                tableModelProperties.addRow(new Object[]{"GPX name", gpxFile.getName()});
-                if (!gpxFile.getDesc().equals("")) {
-                    tableModelProperties.addRow(new Object[]{"GPX desc", gpxFile.getDesc()});
-                }
-                String timeString = "";
-                if (gpxFile.getTime() != null) {
-                    Date time = gpxFile.getTime();
-                    timeString = sdf.format(time);
-                }
-                tableModelProperties.addRow(new Object[]{"GPX time", timeString});
-                
+            } else if (gpxFile.isGPXFileWithOneTracksegOnly()) { // display single track(seg) details
                 Track trk = gpxFile.getTracks().get(0);
                 WaypointGroup trkpts = trk.getTracksegs().get(0);
                 propsDisplayTrackseg(trk, trkpts);
             } else { // display file top-level container info
-                tableModelProperties.addRow(new Object[]{"GPX name", gpxFile.getName()});
-                if (!gpxFile.getDesc().equals("")) {
-                    tableModelProperties.addRow(new Object[]{"GPX desc", gpxFile.getDesc()});
-                }
-                String timeString = "";
-                if (gpxFile.getTime() != null) {
-                    Date time = gpxFile.getTime();
-                    timeString = sdf.format(time);
-                }
-                tableModelProperties.addRow(new Object[]{"GPX time", timeString});
-                tableModelProperties.addRow(new Object[]{"waypoints",
-                        gpxFile.getWaypointGroup().getWaypoints().size()});
+                tableModelProperties.addRow(new Object[]{"waypoints", gpxFile.getWaypointGroup().getNumPts()});
                 tableModelProperties.addRow(new Object[]{"routes", gpxFile.getRoutes().size()});
                 tableModelProperties.addRow(new Object[]{"tracks", gpxFile.getTracks().size()});
             }
             
         } else { // this is not a GPX file
-            DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) currentNode.getParent();
+            DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) currSelection.getParent();
             Object parentObject = parentNode.getUserObject();
             
-            if (activeGPXObject.getClass().equals(Route.class)) { /// this is a route
+            if (activeGPXObject.isRoute()) { /// this is a route
                 Route rte = (Route) activeGPXObject;
                 propsDisplayRoute(rte);
-            } else if (activeGPXObject.getClass().equals(Track.class)) { // this is a track
+            } else if (activeGPXObject.isTrack()) { // this is a track
                 Track trk = (Track) activeGPXObject;
                 if (trk.getTracksegs().size() == 1) { // display single trackseg details
                     WaypointGroup trkpts = trk.getTracksegs().get(0);
@@ -1339,7 +1308,7 @@ public class GPXCreator extends JComponent {
                     }
                     tableModelProperties.addRow(new Object[]{"segments", trk.getTracksegs().size()});
                 }
-            } else if (activeGPXObject.getClass().equals(WaypointGroup.class)) {
+            } else if (activeGPXObject.isWaypointGroup()) {
                 WaypointGroup wptGrp = (WaypointGroup) activeGPXObject;
                 if (wptGrp.getWptGrpType() == WptGrpType.WAYPOINTS) { // this is a top level waypoint collection
                     tableModelProperties.addRow(new Object[]{"waypoints", wptGrp.getWaypoints().size()});
@@ -1484,7 +1453,7 @@ public class GPXCreator extends JComponent {
         } else {
             tableProperties.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
             width = scrollPaneProperties.getWidth() + 100;
-            tableProperties.getColumn("Value").setPreferredWidth(width); // TODO finish this fix
+            tableProperties.getColumn("Value").setPreferredWidth(width);
             tableProperties.getColumn("Value").setMinWidth(width);
         }
     }
@@ -1493,44 +1462,9 @@ public class GPXCreator extends JComponent {
         tableModelProperties.setRowCount(0);
     }
     
-    public void updateActiveWptGrp() {
-        activeWptGrp = null;
-        activeTracksegNode = null;
-        if (activeGPXObject.isWaypointGroup()) {
-            activeWptGrp = (WaypointGroup) activeGPXObject;
-            if (activeWptGrp.getWptGrpType() == WptGrpType.TRACKSEG) {
-                activeTracksegNode = (DefaultMutableTreeNode) currSelection;
-            }
-        } else if (activeGPXObject.isRoute()) {
-            activeWptGrp = ((Route) activeGPXObject).getPath(); 
-        } else if (activeGPXObject.isTrackWithOneSeg()) {
-            Track trk = (Track) activeGPXObject;
-            activeWptGrp = trk.getTracksegs().get(0);
-            activeTracksegNode = (DefaultMutableTreeNode) currSelection.getFirstChild();
-        } else if (activeGPXObject.isGPXFile()) {
-            GPXFile gpxFile = (GPXFile) activeGPXObject;
-            if (gpxFile.isGPXFileWithOneRouteOnly()) { // one route only
-                activeWptGrp = gpxFile.getRoutes().get(0).getPath(); 
-            } else if (gpxFile.isGPXFileWithOneTracksegOnly()) { // one trackseg only
-                Track trk = gpxFile.getTracks().get(0);
-                activeWptGrp = trk.getTracksegs().get(0);
-                
-                DefaultMutableTreeNode trackNode = null;
-                @SuppressWarnings("unchecked")
-                Enumeration<DefaultMutableTreeNode> children = currSelection.children();
-                while (children.hasMoreElements()) {
-                    trackNode = children.nextElement();
-                    if (((GPXObject) trackNode.getUserObject()).isTrackseg()) {
-                        break;
-                    }
-                }
-                activeTracksegNode = (DefaultMutableTreeNode) trackNode.getFirstChild();
-                
-            }
-        }
-    }
-    
-    public void updateActiveWpt(MouseEvent e) { // common function used by multiple mouse listeners
+    // common function used by multiple mouse listeners
+    // the "active" waypoint is the one highlighted on mouseover/mousenear in point delete/split modes
+    public void updateActiveWpt(MouseEvent e) {
         if (tglDelPoints.isSelected() || tglSplitTrackseg.isSelected()) {
             updateActiveWptGrp();
             activeWpt = null;
@@ -1575,6 +1509,42 @@ public class GPXCreator extends JComponent {
         }        
     }
     
+    public void updateActiveWptGrp() {
+        activeWptGrp = null;
+        activeTracksegNode = null;
+        if (activeGPXObject.isWaypointGroup()) {
+            activeWptGrp = (WaypointGroup) activeGPXObject;
+            if (activeWptGrp.getWptGrpType() == WptGrpType.TRACKSEG) {
+                activeTracksegNode = (DefaultMutableTreeNode) currSelection;
+            }
+        } else if (activeGPXObject.isRoute()) {
+            activeWptGrp = ((Route) activeGPXObject).getPath(); 
+        } else if (activeGPXObject.isTrackWithOneSeg()) {
+            Track trk = (Track) activeGPXObject;
+            activeWptGrp = trk.getTracksegs().get(0);
+            activeTracksegNode = (DefaultMutableTreeNode) currSelection.getFirstChild();
+        } else if (activeGPXObject.isGPXFile()) {
+            GPXFile gpxFile = (GPXFile) activeGPXObject;
+            if (gpxFile.isGPXFileWithOneRouteOnly()) { // one route only
+                activeWptGrp = gpxFile.getRoutes().get(0).getPath(); 
+            } else if (gpxFile.isGPXFileWithOneTracksegOnly()) { // one trackseg only
+                Track trk = gpxFile.getTracks().get(0);
+                activeWptGrp = trk.getTracksegs().get(0);
+                
+                DefaultMutableTreeNode trackNode = null;
+                @SuppressWarnings("unchecked")
+                Enumeration<DefaultMutableTreeNode> children = currSelection.children();
+                while (children.hasMoreElements()) {
+                    trackNode = children.nextElement();
+                    if (((GPXObject) trackNode.getUserObject()).isTrackseg()) {
+                        break;
+                    }
+                }
+                activeTracksegNode = (DefaultMutableTreeNode) trackNode.getFirstChild();
+            }
+        }
+    }
+
     public void deselectAllToggles(JToggleButton exceptThisOne) {
         List<JToggleButton> toggles = new ArrayList<JToggleButton>();
         toggles.add(tglAddPoints);
@@ -1589,9 +1559,8 @@ public class GPXCreator extends JComponent {
         }
     }
     
+    // dynamically enable/disable certain toolbar buttons
     public void updateButtonVisibility() {
-
-        // dynamically enable/disable certain toolbar buttons
         btnFileSave.setEnabled(false);
         btnObjectDelete.setEnabled(false);
         tglAddPoints.setEnabled(false);

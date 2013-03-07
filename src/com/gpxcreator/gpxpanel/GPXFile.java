@@ -559,11 +559,10 @@ public class GPXFile extends GPXObject {
         Validator validator = schema.newValidator();
         try {
             validator.validate(xmlFile);
-            //System.out.println(xmlFile.getSystemId() + " is valid");
             return true;
         } catch (SAXException | IOException e) {
-            //System.out.println(xmlFile.getSystemId() + " is NOT valid");
-            //System.out.println("Reason: " + e.getLocalizedMessage());
+            System.err.println(xmlFile.getSystemId() + " is not valid.");
+            System.err.println("Validation error: " + e.getLocalizedMessage() + "\n");
             return false;
         }
     }
