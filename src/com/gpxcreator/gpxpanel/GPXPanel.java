@@ -106,7 +106,12 @@ public class GPXPanel extends JMapViewer {
         
         paintFiles(g2d, gpxFiles);
         if (showCrosshair) {
-            Point p = this.getMapPosition(new Coordinate(crosshairLat, crosshairLon), false);
+            Point p = null;
+            if (crosshairLon > -180) { // hack fix for bug in JMapViewer.getMapPosition
+                p = this.getMapPosition(new Coordinate(crosshairLat, crosshairLon), false);
+            } else {
+                p = this.getMapPosition(new Coordinate(crosshairLat, -180), false);
+            }
             int offset = imgCrosshair.getWidth(null) / 2;
             g2d.drawImage(imgCrosshair, p.x - offset, p.y - offset, null);
         }
@@ -225,7 +230,6 @@ public class GPXPanel extends JMapViewer {
     
             // draw colored route
             g2d.setStroke(new BasicStroke(3, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            //new Basic
             g2d.setColor(saveColor);
             g2d.draw(path);
             g2d.setStroke(saveStroke);

@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 import javax.xml.XMLConstants;
 import javax.xml.bind.DatatypeConverter;
@@ -284,6 +285,7 @@ public class GPXFile extends GPXObject {
         XMLOutputFactory factory = XMLOutputFactory.newInstance();
         XMLStreamWriter xsw;
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        df.setTimeZone(TimeZone.getTimeZone("UTC"));
         try {
             xsw = factory.createXMLStreamWriter(fos, "UTF-8");
             

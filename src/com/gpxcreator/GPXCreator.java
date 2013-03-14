@@ -8,6 +8,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.Font;
+import java.awt.HeadlessException;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
@@ -34,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -43,6 +45,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -58,6 +61,7 @@ import javax.swing.JTree;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -103,11 +107,15 @@ public class GPXCreator extends JComponent {
     
     // indents show layout hierarchy
     private JFrame frame;
+    private JPanel glassPane;
+    private JLabel glassPaneStatus;
         private JToolBar toolBarMain;       // NORTH
+            private boolean fileIOHappening;
             private JButton btnFileNew;    
             private JButton btnFileOpen;
             private JFileChooser chooserFileOpen;
             private File fileOpened;
+            private GPXFile gpxFileOpened;
             private JButton btnFileSave;
             private JFileChooser chooserFileSave;
             private File fileSave;
@@ -188,6 +196,17 @@ public class GPXCreator extends JComponent {
         /* MAIN FRAME
          * --------------------------------------------------------------------------------------------------------- */
         frame = new JFrame("GPX Creator");
+        glassPane = new JPanel();
+        glassPane.setOpaque(false);
+        frame.setGlassPane(glassPane);
+        glassPane.setLayout(new BorderLayout());
+        glassPaneStatus = new JLabel();
+        glassPaneStatus.setHorizontalAlignment(SwingConstants.CENTER);
+        glassPaneStatus.setFont(new Font("Segoe UI", Font.PLAIN, 22));
+        glassPaneStatus.setOpaque(true);
+        glassPaneStatus.setBackground(new Color(177, 177, 25, 127));
+        glassPaneStatus.setForeground(Color.BLACK);
+        glassPane.add(glassPaneStatus, BorderLayout.SOUTH);
         InputStream in = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/gpx-creator.png");
         BufferedImage bufImg = null;
         if (in != null) {
@@ -442,15 +461,18 @@ public class GPXCreator extends JComponent {
         /* NEW FILE BUTTON
          * --------------------------------------------------------------------------------------------------------- */
         btnFileNew = new JButton("");
-        btnFileNew.addMouseListener(new MouseAdapter() {
+        btnFileNew.addActionListener(new ActionListener() {
             @Override
-            public void mouseReleased(MouseEvent e) {
+            public void actionPerformed(ActionEvent e) {
                 fileNew();
             }
         });
+        
         btnFileNew.setToolTipText("<html>Create new GPX file<br>[CTRL+N]</html>");
         btnFileNew.setFocusable(false);
         btnFileNew.setIcon(new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/file-new.png")));
+        btnFileNew.setDisabledIcon(
+                new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/file-new-disabled.png")));
         String ctrlNew = "CTRL+N";
         mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
                 KeyStroke.getKeyStroke(KeyEvent.VK_N, KeyEvent.CTRL_DOWN_MASK), ctrlNew);
@@ -471,21 +493,37 @@ public class GPXCreator extends JComponent {
         
         FileNameExtensionFilter gpxFilter = new FileNameExtensionFilter("GPX files (*.gpx)", "gpx");
         btnFileOpen = new JButton("");
-        chooserFileOpen = new JFileChooser();
+        chooserFileOpen = new JFileChooser() {
+            @Override
+            protected JDialog createDialog(Component parent) throws HeadlessException {
+                JDialog dialog = super.createDialog(parent);
+                InputStream in = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/file-open.png");
+                BufferedImage img = null;
+                try {
+                    img = ImageIO.read(in);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                dialog.setIconImage(img);
+                return dialog;
+            }
+        };
         chooserFileOpen.setCurrentDirectory(
                 new File("C:\\eclipse\\workspace\\GPXCreator\\IO")); // TODO change this before deployment
         chooserFileOpen.addChoosableFileFilter(gpxFilter);
         chooserFileOpen.setFileFilter(gpxFilter);
         chooserFileOpen.setPreferredSize(new Dimension(chooserWidth, chooserHeight));
-        btnFileOpen.addMouseListener(new MouseAdapter() {
+        btnFileOpen.addActionListener(new ActionListener() {
             @Override
-            public void mouseReleased(MouseEvent e) {
+            public void actionPerformed(ActionEvent e) {
                 fileOpen();
             }
         });
         btnFileOpen.setToolTipText("<html>Open GPX file<br>[CTRL+O]</html>");
         btnFileOpen.setFocusable(false);
         btnFileOpen.setIcon(new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/file-open.png")));
+        btnFileOpen.setDisabledIcon(
+                new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/file-open-disabled.png")));
         String ctrlOpen = "CTRL+O";
         mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
                 KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK), ctrlOpen);
@@ -500,21 +538,38 @@ public class GPXCreator extends JComponent {
         /* SAVE FILE BUTTON
          * --------------------------------------------------------------------------------------------------------- */
         btnFileSave = new JButton("");
-        chooserFileSave = new JFileChooser();
+        chooserFileSave = new JFileChooser() {
+            @Override
+            protected JDialog createDialog(Component parent) throws HeadlessException {
+                JDialog dialog = super.createDialog(parent);
+                InputStream in = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/file-save.png");
+                BufferedImage img = null;
+                try {
+                    img = ImageIO.read(in);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                dialog.setIconImage(img);
+                return dialog;
+            }
+        };
         chooserFileSave.setCurrentDirectory(
                 new File("C:\\eclipse\\workspace\\GPXCreator\\IO")); // TODO change this before deployment
         chooserFileSave.addChoosableFileFilter(gpxFilter);
         chooserFileSave.setFileFilter(gpxFilter);
         chooserFileSave.setPreferredSize(new Dimension(chooserWidth, chooserHeight));
-        btnFileSave.addMouseListener(new MouseAdapter() {
+        btnFileSave.addActionListener(new ActionListener() {
             @Override
-            public void mouseReleased(MouseEvent e) {
+            public void actionPerformed(ActionEvent e) {
                 fileSave();
             }
         });
+        
         btnFileSave.setToolTipText("<html>Save selected GPX file<br>[CTRL+S]</html>");
         btnFileSave.setFocusable(false);
         btnFileSave.setIcon(new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/file-save.png")));
+        btnFileSave.setDisabledIcon(
+                new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/file-save-disabled.png")));
         String ctrlSave = "CTRL+S";
         mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
                 KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK), ctrlSave);
@@ -526,22 +581,22 @@ public class GPXCreator extends JComponent {
         });
         toolBarMain.add(btnFileSave);
         btnFileSave.setEnabled(false);
-        btnFileSave.setDisabledIcon(
-                new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/file-save-disabled.png")));
         
         /* OBJECT DELETE BUTTON
          * --------------------------------------------------------------------------------------------------------- */
         btnObjectDelete = new JButton("");
-        btnObjectDelete.addMouseListener(new MouseAdapter() {
+        btnObjectDelete.addActionListener(new ActionListener() {
             @Override
-            public void mouseReleased(MouseEvent e) {
+            public void actionPerformed(ActionEvent e) {
                 deleteActiveGPXObject();
             }
         });
         btnObjectDelete.setToolTipText("<html>Delete selected object<br>[CTRL+D]</html>");
         btnObjectDelete.setFocusable(false);
-        btnObjectDelete.setIcon(new ImageIcon(GPXCreator.class.getResource(
-                "/com/gpxcreator/icons/object-delete.png")));
+        btnObjectDelete.setIcon(
+                new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/object-delete.png")));
+        btnObjectDelete.setDisabledIcon(
+                new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/object-delete-disabled.png")));
         String ctrlDelete = "CTRL+D";
         mapPanel.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
                 KeyStroke.getKeyStroke(KeyEvent.VK_D, KeyEvent.CTRL_DOWN_MASK), ctrlDelete);
@@ -554,18 +609,10 @@ public class GPXCreator extends JComponent {
         toolBarMain.add(btnObjectDelete);
         toolBarMain.addSeparator();
         btnObjectDelete.setEnabled(false);
-        btnObjectDelete.setDisabledIcon(
-                new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/object-delete-disabled.png")));
         
         /* EDIT PROPERTIES BUTTON
          * --------------------------------------------------------------------------------------------------------- */
         btnEditProperties = new JButton("");
-        btnEditProperties.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                // need a new method
-            }
-        });
         btnEditProperties.setToolTipText("Edit properties");
         btnEditProperties.setFocusable(false);
         btnEditProperties.setIcon(new ImageIcon(
@@ -573,6 +620,12 @@ public class GPXCreator extends JComponent {
         btnEditProperties.setEnabled(false);
         btnEditProperties.setDisabledIcon(new ImageIcon(
                 GPXCreator.class.getResource("/com/gpxcreator/icons/edit-properties-disabled.png")));
+        btnEditProperties.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                editProperties();
+            }
+        });
         toolBarMain.add(btnEditProperties);
         
         /* ADD POINTS BUTTON
@@ -618,7 +671,7 @@ public class GPXCreator extends JComponent {
                     gpxFile.updateAllProperties();
                     
                     mapPanel.repaint();
-                    resetRoutePropsTable();
+                    updateRoutePropsTable();
                 }
             }
         });
@@ -711,10 +764,10 @@ public class GPXCreator extends JComponent {
                         List<Waypoint> trackptsBeforeSplit = tracksegBeforeSplit.getWaypoints();
                         int splitIndex = trackptsBeforeSplit.indexOf(activeWpt);
                         
-                        List<Waypoint> trackptsAfterSplit1 =
-                                new ArrayList<Waypoint>(trackptsBeforeSplit.subList(0, splitIndex + 1));
-                        List<Waypoint> trackptsAfterSplit2 =
-                                new ArrayList<Waypoint>(trackptsBeforeSplit.subList(splitIndex, trackptsBeforeSplit.size()));
+                        List<Waypoint> trackptsAfterSplit1 = new ArrayList<Waypoint>(
+                                trackptsBeforeSplit.subList(0, splitIndex + 1));
+                        List<Waypoint> trackptsAfterSplit2 = new ArrayList<Waypoint>(
+                                trackptsBeforeSplit.subList(splitIndex, trackptsBeforeSplit.size()));
                         WaypointGroup tracksegAfterSplit1 =
                                 new WaypointGroup(tracksegBeforeSplit.getColor(), WptGrpType.TRACKSEG);
                         WaypointGroup tracksegAfterSplit2 =
@@ -749,7 +802,7 @@ public class GPXCreator extends JComponent {
                     activeWpt = null;
                     mapPanel.setShownPoint(null);
                     mapPanel.repaint();
-                    resetRoutePropsTable();
+                    updateRoutePropsTable();
                     updateActiveWpt(e);
                 }
             }
@@ -794,30 +847,69 @@ public class GPXCreator extends JComponent {
         btnCorrectEle.setDisabledIcon(new ImageIcon(
                 GPXCreator.class.getResource("/com/gpxcreator/icons/correct-elevation-disabled.png")));
         btnCorrectEle.setFocusable(false);
-        btnCorrectEle.addMouseListener(new MouseAdapter() {
+        btnCorrectEle.addActionListener(new ActionListener() {
             @Override
-            public void mouseReleased(MouseEvent e) {
+            public void actionPerformed(ActionEvent e) {
                 if (activeGPXObject != null) {
                     updateActiveWptGrp();
                     if (activeWptGrp != null) {
-                        EleCorrectedStatus corrected = activeWptGrp.correctElevation(true);
-                        if (corrected == EleCorrectedStatus.FAILED) {
-                            JOptionPane.showMessageDialog(frame,
-                                    "<html>There was a problem correcting the elevation.  Possible causes:<br>" +
-                                    " - an empty set of points was submitted<br>" +
-                                    " - the route/track submitted was too long (limit of ~150 miles)<br>" +
-                                    " - the response from the server contained errors or was empty</html>",
-                                    "Error",
-                                    JOptionPane.ERROR_MESSAGE);
-                        } else if (corrected == EleCorrectedStatus.CORRECTED_WITH_CLEANSE) {
-                            JOptionPane.showMessageDialog(frame,
-                                    "<html>The elevation response from the server had missing data segments.<br>" +
-                                    "These have been filled in by linear interpolation.</html>",
-                                    "Information",
-                                    JOptionPane.INFORMATION_MESSAGE);
-                        }
+                        
+                        SwingWorker<EleCorrectedStatus, Void> eleCorrWorker =
+                                new SwingWorker<EleCorrectedStatus, Void>() {
+                            @Override
+                            public EleCorrectedStatus doInBackground() {
+                                glassPane.setVisible(true);
+                                glassPaneStatus.setText("correcting elevation...");
+                                glassPane.setCursor(new Cursor(Cursor.WAIT_CURSOR));
+                                btnCorrectEle.setEnabled(false);
+                                SwingUtilities.invokeLater(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        frame.repaint();
+                                    }
+                                });
+                                return activeWptGrp.correctElevation(true);
+                            }
+                            @Override
+                            protected void done() {
+                                EleCorrectedStatus corrected = null;
+                                try {
+                                    corrected = get();
+                                } catch (InterruptedException | ExecutionException e) {
+                                    e.printStackTrace();
+                                } finally {
+                                    if (corrected == EleCorrectedStatus.FAILED) {
+                                        JOptionPane.showMessageDialog(frame,
+                                                "<html>There was a problem correcting the elevation." +
+                                                "  Possible causes:<br>" +
+                                                " - an empty set of points was submitted<br>" +
+                                                " - the route/track submitted was too long (limit of ~150 miles)<br>" +
+                                                " - the response from the server contained errors or was empty</html>",
+                                                "Error",
+                                                JOptionPane.ERROR_MESSAGE);
+                                    } else if (corrected == EleCorrectedStatus.CORRECTED_WITH_CLEANSE) {
+                                        JOptionPane.showMessageDialog(frame,
+                                                "<html>The elevation response from the server" +
+                                                " had missing data segments.<br>" +
+                                                "These have been filled in by linear interpolation.</html>",
+                                                "Information",
+                                                JOptionPane.INFORMATION_MESSAGE);
+                                    } else if (corrected == EleCorrectedStatus.CORRECTED) {
+                                        JOptionPane.showMessageDialog(frame,
+                                                "<html>Elevation data successfully corrected.</html>",
+                                                "Information",
+                                                JOptionPane.INFORMATION_MESSAGE);
+                                    }
+                                    updateButtonVisibility();
+                                    glassPane.setVisible(false);
+                                    glassPaneStatus.setText("");
+                                    glassPane.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+                                    updateRoutePropsTable();
+                                }
+                            }
+                        };
+                        eleCorrWorker.execute();
                     }
-                    resetRoutePropsTable();
                 }
             }
         });
@@ -833,9 +925,9 @@ public class GPXCreator extends JComponent {
         btnEleChart.setDisabledIcon(new ImageIcon(
                 GPXCreator.class.getResource("/com/gpxcreator/icons/elevation-chart-disabled.png")));
         btnEleChart.setFocusable(false);
-        btnEleChart.addMouseListener(new MouseAdapter() {
+        btnEleChart.addActionListener(new ActionListener() {
             @Override
-            public void mouseReleased(MouseEvent e) {
+            public void actionPerformed(ActionEvent e) {
                 buildChart("Elevation profile", "/com/gpxcreator/icons/elevation-chart.png");
             }
         });
@@ -851,9 +943,9 @@ public class GPXCreator extends JComponent {
         btnSpeedChart.setDisabledIcon(new ImageIcon(
                 GPXCreator.class.getResource("/com/gpxcreator/icons/speed-chart-disabled.png")));
         btnSpeedChart.setFocusable(false);
-        btnSpeedChart.addMouseListener(new MouseAdapter() {
+        btnSpeedChart.addActionListener(new ActionListener() {
             @Override
-            public void mouseReleased(MouseEvent e) {
+            public void actionPerformed(ActionEvent e) {
                 buildChart("Speed profile", "/com/gpxcreator/icons/speed-chart.png");
             }
         });
@@ -1109,9 +1201,9 @@ public class GPXCreator extends JComponent {
         
         // button for quick easy debugging
         JButton debug = new JButton("debug");
-        debug.addMouseListener(new MouseAdapter() {
+        debug.addActionListener(new ActionListener() {
             @Override
-            public void mouseClicked(MouseEvent e) {
+            public void actionPerformed(ActionEvent e) {
                 // do something
             }
         });
@@ -1119,12 +1211,16 @@ public class GPXCreator extends JComponent {
         toolBarMain.addSeparator();
         toolBarMain.add(debug);
         
-        java.util.Properties systemProperties = System.getProperties();
+        /*java.util.Properties systemProperties = System.getProperties();
         systemProperties.setProperty("http.proxyHost", "proxy1.lmco.com");
-        systemProperties.setProperty("http.proxyPort", "80");
+        systemProperties.setProperty("http.proxyPort", "80");*/
     }
     
     public void fileNew() {
+        if (fileIOHappening) {
+            return;
+        }
+        
         String name = (String)JOptionPane.showInputDialog(frame, "Please type a name for the new route:",
                 "New route", JOptionPane.PLAIN_MESSAGE, null, null, null);
         if (name != null) {
@@ -1145,46 +1241,77 @@ public class GPXCreator extends JComponent {
     }
     
     public void fileOpen() {
+        if (fileIOHappening) {
+            return;
+        }
+        
         int returnVal = chooserFileOpen.showOpenDialog(frame);
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             fileOpened = chooserFileOpen.getSelectedFile();
-            boolean valid = GPXFile.validateGPXFile(fileOpened);
-            if (!valid) {
-                JOptionPane.showMessageDialog(frame,
-                        "<html>The selected file does not validate against the GPX schema version 1.1.<br>" +
-                        "There is a chance that the file will not load properly.</html>",
-                        "Warning",
-                        JOptionPane.WARNING_MESSAGE);
-            }
-            GPXFile gpxFile = new GPXFile(fileOpened);
-            mapPanel.addGPXFile(gpxFile);
             
-            DefaultMutableTreeNode gpxFileNode = new DefaultMutableTreeNode(gpxFile);
-            treeModel.insertNodeInto(gpxFileNode, root, root.getChildCount());
-            if (gpxFile.getWaypointGroup().getWaypoints().size() > 0) {
-                DefaultMutableTreeNode wptsNode = new DefaultMutableTreeNode(gpxFile.getWaypointGroup());
-                treeModel.insertNodeInto(wptsNode, gpxFileNode, gpxFileNode.getChildCount());
-            }
-            for (Route route : gpxFile.getRoutes()) {
-                DefaultMutableTreeNode rteNode = new DefaultMutableTreeNode(route);
-                treeModel.insertNodeInto(rteNode, gpxFileNode, gpxFileNode.getChildCount());
-            }
-            for (Track track : gpxFile.getTracks()) {
-                DefaultMutableTreeNode trkNode = new DefaultMutableTreeNode(track);
-                treeModel.insertNodeInto(trkNode, gpxFileNode, gpxFileNode.getChildCount());
-                for (WaypointGroup trackseg : track.getTracksegs()) {
-                    DefaultMutableTreeNode trksegNode = new DefaultMutableTreeNode(trackseg);
-                    treeModel.insertNodeInto(trksegNode, trkNode, trkNode.getChildCount());
+            SwingWorker<Void, Void> fileOpenWorker = new SwingWorker<Void, Void>() {
+                @Override
+                public Void doInBackground() {
+                    boolean valid = GPXFile.validateGPXFile(fileOpened);
+                    if (!valid) {
+                        JOptionPane.showMessageDialog(frame,
+                                "<html>The selected file does not validate against the GPX schema version 1.1.<br>" +
+                                "There is a chance that the file will not load properly.</html>",
+                                "Warning",
+                                JOptionPane.WARNING_MESSAGE);
+                    }
+                    gpxFileOpened = new GPXFile(fileOpened);
+                    return null;
                 }
-            }
-            setActiveGPXObject((GPXObject) gpxFile);
-            TreeNode[] nodes = treeModel.getPathToRoot(gpxFileNode);
-            tree.setSelectionPath(new TreePath(nodes));
-            tree.scrollRectToVisible(new Rectangle(0, 999999999, 1, 1));
+                @Override
+                protected void done() {
+                    mapPanel.addGPXFile(gpxFileOpened);
+
+                    DefaultMutableTreeNode gpxFileNode = new DefaultMutableTreeNode(gpxFileOpened);
+                    treeModel.insertNodeInto(gpxFileNode, root, root.getChildCount());
+                    if (gpxFileOpened.getWaypointGroup().getWaypoints().size() > 0) {
+                        DefaultMutableTreeNode wptsNode = new DefaultMutableTreeNode(gpxFileOpened.getWaypointGroup());
+                        treeModel.insertNodeInto(wptsNode, gpxFileNode, gpxFileNode.getChildCount());
+                    }
+                    for (Route route : gpxFileOpened.getRoutes()) {
+                        DefaultMutableTreeNode rteNode = new DefaultMutableTreeNode(route);
+                        treeModel.insertNodeInto(rteNode, gpxFileNode, gpxFileNode.getChildCount());
+                    }
+                    for (Track track : gpxFileOpened.getTracks()) {
+                        DefaultMutableTreeNode trkNode = new DefaultMutableTreeNode(track);
+                        treeModel.insertNodeInto(trkNode, gpxFileNode, gpxFileNode.getChildCount());
+                        for (WaypointGroup trackseg : track.getTracksegs()) {
+                            DefaultMutableTreeNode trksegNode = new DefaultMutableTreeNode(trackseg);
+                            treeModel.insertNodeInto(trksegNode, trkNode, trkNode.getChildCount());
+                        }
+                    }
+                    
+                    setActiveGPXObject((GPXObject) gpxFileOpened);
+                    TreeNode[] nodes = treeModel.getPathToRoot(gpxFileNode);
+                    tree.setSelectionPath(new TreePath(nodes));
+                    tree.scrollRectToVisible(new Rectangle(0, 999999999, 1, 1));
+                    
+                    setFileIOHappening(false);
+                    glassPane.setVisible(false);
+                    glassPaneStatus.setText("");
+                    glassPane.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+                    frame.repaint();
+                }
+            };
+            glassPane.setVisible(true);
+            glassPaneStatus.setText("opening file...");
+            glassPane.setCursor(new Cursor(Cursor.WAIT_CURSOR));
+            setFileIOHappening(true);
+            frame.repaint();
+            fileOpenWorker.execute();
         }
     }
     
     public void fileSave() {
+        if (fileIOHappening) {
+            return;
+        }
+        
         if (currSelection == null) {
             return;
         }
@@ -1198,11 +1325,35 @@ public class GPXCreator extends JComponent {
         int returnVal = chooserFileSave.showSaveDialog(frame);
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             fileSave = chooserFileSave.getSelectedFile();
-            ((GPXFile) activeGPXObject).saveToGPXFile(fileSave);
+
+            SwingWorker<Void, Void> fileSaveWorker = new SwingWorker<Void, Void>() {
+                @Override
+                public Void doInBackground() {
+                    ((GPXFile) activeGPXObject).saveToGPXFile(fileSave);
+                    return null;
+                }
+                @Override
+                protected void done() {
+                    setFileIOHappening(false);
+                    glassPane.setVisible(false);
+                    glassPaneStatus.setText("");
+                    glassPane.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+                }
+            };
+            glassPane.setVisible(true);
+            glassPaneStatus.setText("saving file...");
+            glassPane.setCursor(new Cursor(Cursor.WAIT_CURSOR));
+            setFileIOHappening(true);
+            frame.repaint();
+            fileSaveWorker.execute();
         }
     }
     
     public void deleteActiveGPXObject() {
+        if (fileIOHappening) {
+            return;
+        }
+        
         if (activeGPXObject != null) {
             DefaultMutableTreeNode currentNode = currSelection;
             DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) currentNode.getParent();
@@ -1249,10 +1400,10 @@ public class GPXCreator extends JComponent {
         activeGPXObject = gpxObject;
         gpxObject.setVisible(true);
         mapPanel.fitGPXObjectToPanel(gpxObject);
-        resetRoutePropsTable();
+        updateRoutePropsTable();
     }
     
-    public void resetRoutePropsTable() {
+    public void updateRoutePropsTable() {
         tableModelProperties.setRowCount(0);
         
         if (activeGPXObject.isGPXFile()) { // this is a GPX file
@@ -1561,6 +1712,8 @@ public class GPXCreator extends JComponent {
     
     // dynamically enable/disable certain toolbar buttons
     public void updateButtonVisibility() {
+        btnFileNew.setEnabled(true);
+        btnFileOpen.setEnabled(true);            
         btnFileSave.setEnabled(false);
         btnObjectDelete.setEnabled(false);
         tglAddPoints.setEnabled(false);
@@ -1569,11 +1722,12 @@ public class GPXCreator extends JComponent {
         btnCorrectEle.setEnabled(false);
         btnEleChart.setEnabled(false);
         btnSpeedChart.setEnabled(false);
+        btnEditProperties.setEnabled(false);
         
         if (currSelection != null) {
             btnFileSave.setEnabled(true);
             btnObjectDelete.setEnabled(true);
-            GPXObject o = (GPXObject) currSelection.getUserObject();
+            GPXObject o = activeGPXObject;
             
             if (o.isRoute() || o.isWaypoints() || o.isGPXFileWithOneRoute() || o.isGPXFileWithNoRoutes()) {
                 tglAddPoints.setEnabled(true);
@@ -1590,6 +1744,16 @@ public class GPXCreator extends JComponent {
             if (o.isTrackseg() || o.isTrackWithOneSeg() || o.isGPXFileWithOneTracksegOnly()) {
                 btnSpeedChart.setEnabled(true);
             }
+            if (o.isGPXFile() || o.isRoute() || o.isTrack()) {
+                btnEditProperties.setEnabled(true);
+            }
+        }
+        
+        if (fileIOHappening) {
+            btnFileNew.setEnabled(false);
+            btnFileOpen.setEnabled(false);            
+            btnFileSave.setEnabled(false);
+            btnObjectDelete.setEnabled(false);
         }
     }
     
@@ -1623,5 +1787,17 @@ public class GPXCreator extends JComponent {
                 f.setVisible(true);
             }
         }
+    }
+    
+    public void editProperties() {
+        //if (activeGPXObject.isGPXFile()) {
+            EditPropsDialog dlg = new EditPropsDialog(frame, "Edit properties", activeGPXObject);
+            dlg.setVisible(true);
+        //}
+    }
+    
+    public void setFileIOHappening(boolean happening) {
+        fileIOHappening = happening;
+        updateButtonVisibility();
     }
 }
