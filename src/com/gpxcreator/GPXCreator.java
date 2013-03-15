@@ -671,7 +671,7 @@ public class GPXCreator extends JComponent {
                     gpxFile.updateAllProperties();
                     
                     mapPanel.repaint();
-                    updateRoutePropsTable();
+                    updatePropsTable();
                 }
             }
         });
@@ -802,7 +802,7 @@ public class GPXCreator extends JComponent {
                     activeWpt = null;
                     mapPanel.setShownPoint(null);
                     mapPanel.repaint();
-                    updateRoutePropsTable();
+                    updatePropsTable();
                     updateActiveWpt(e);
                 }
             }
@@ -904,7 +904,7 @@ public class GPXCreator extends JComponent {
                                     glassPane.setVisible(false);
                                     glassPaneStatus.setText("");
                                     glassPane.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
-                                    updateRoutePropsTable();
+                                    updatePropsTable();
                                 }
                             }
                         };
@@ -1325,6 +1325,13 @@ public class GPXCreator extends JComponent {
         int returnVal = chooserFileSave.showSaveDialog(frame);
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             fileSave = chooserFileSave.getSelectedFile();
+            if (fileSave.exists()) {
+                int response = JOptionPane.showConfirmDialog(frame, "File already exists. Do you want to replace it?",
+                        "Confirm file overwrite", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
+                if (response == JOptionPane.CANCEL_OPTION || response == JOptionPane.CLOSED_OPTION) {
+                    return; // cancel the save operation
+                }
+            }
 
             SwingWorker<Void, Void> fileSaveWorker = new SwingWorker<Void, Void>() {
                 @Override
@@ -1371,7 +1378,7 @@ public class GPXCreator extends JComponent {
             if (activeGPXObject.isGPXFile()) { // this is a GPX file
                 mapPanel.removeGPXFile((GPXFile) activeGPXObject);
                 activeGPXObject = null;
-                clearRoutePropsTable();
+                clearPropsTable();
             } else {
                 if (activeGPXObject.isRoute()) { // this is a route
                     ((GPXFile) parentObject).getRoutes().remove((Route) activeGPXObject);
@@ -1400,10 +1407,10 @@ public class GPXCreator extends JComponent {
         activeGPXObject = gpxObject;
         gpxObject.setVisible(true);
         mapPanel.fitGPXObjectToPanel(gpxObject);
-        updateRoutePropsTable();
+        updatePropsTable();
     }
     
-    public void updateRoutePropsTable() {
+    public void updatePropsTable() {
         tableModelProperties.setRowCount(0);
         
         if (activeGPXObject.isGPXFile()) { // this is a GPX file
@@ -1609,7 +1616,7 @@ public class GPXCreator extends JComponent {
         }
     }
     
-    public void clearRoutePropsTable() {
+    public void clearPropsTable() {
         tableModelProperties.setRowCount(0);
     }
     
@@ -1790,10 +1797,32 @@ public class GPXCreator extends JComponent {
     }
     
     public void editProperties() {
-        //if (activeGPXObject.isGPXFile()) {
-            EditPropsDialog dlg = new EditPropsDialog(frame, "Edit properties", activeGPXObject);
-            dlg.setVisible(true);
-        //}
+        EditPropsDialog dlg = new EditPropsDialog(frame, "Edit properties", activeGPXObject);
+        dlg.setVisible(true);
+        if (dlg.getName() != null) {
+            activeGPXObject.setName(dlg.getName());
+        }
+        if (dlg.getDesc() != null) {
+            activeGPXObject.setDesc(dlg.getDesc());
+        }
+        if (activeGPXObject.isRoute()) {
+            if (dlg.getGPXType() != null) {
+                ((Route) activeGPXObject).setType(dlg.getGPXType());
+            }
+            if (dlg.getNumber() != null) {
+                ((Route) activeGPXObject).setNumber(dlg.getNumber());
+            }
+        }
+        if (activeGPXObject.isTrack()) {
+            if (dlg.getGPXType() != null) {
+                ((Track) activeGPXObject).setType(dlg.getGPXType());
+            }
+            if (dlg.getNumber() != null) {
+                ((Track) activeGPXObject).setNumber(dlg.getNumber());
+            }
+        }
+        treeModel.nodeChanged(currSelection);
+        updatePropsTable();
     }
     
     public void setFileIOHappening(boolean happening) {

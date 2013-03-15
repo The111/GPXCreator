@@ -16,6 +16,8 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
+import java.text.NumberFormat;
+import java.text.ParseException;
 
 import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
@@ -38,6 +40,8 @@ import com.gpxcreator.gpxpanel.Track;
 @SuppressWarnings("serial")
 public class EditPropsDialog extends JDialog {
 
+    private GPXObject gpxObject;
+    
     private String name = null;
     private String desc = null;
     private String gpxType = null;
@@ -52,6 +56,7 @@ public class EditPropsDialog extends JDialog {
         super(frame, title, true);
         setForeground(Color.BLACK);
         getContentPane().setForeground(Color.BLACK);
+        this.gpxObject = gpxObject;
         
         // set icon image
         InputStream in = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/edit-properties.png");
@@ -73,8 +78,8 @@ public class EditPropsDialog extends JDialog {
         
         // button panel
         JPanel btnPanel = new JPanel();
-        JButton btnOk   = new JButton("OK");
-        JButton btnCancel   = new JButton("Cancel");
+        final JButton btnOk = new JButton("OK");
+        JButton btnCancel = new JButton("Cancel");
         btnPanel.add(btnOk);
         btnOk.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -110,6 +115,15 @@ public class EditPropsDialog extends JDialog {
         inputName = new JTextField();
         inputName.setText(gpxObject.getName());
         inputName.setFont(new Font("Tahoma", Font.PLAIN, 11));
+        inputName.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    btnOk.doClick();
+                    e.consume();
+                }
+            }
+        });
         GridBagConstraints gbc_inputName = new GridBagConstraints();
         gbc_inputName.fill = GridBagConstraints.HORIZONTAL;
         gbc_inputName.insets = new Insets(1, 1, 1, 1);
@@ -207,6 +221,15 @@ public class EditPropsDialog extends JDialog {
                 inputGPXType.setText(((Track) gpxObject).getType());
             }
             inputGPXType.setFont(new Font("Tahoma", Font.PLAIN, 11));
+            inputGPXType.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyPressed(KeyEvent e) {
+                    if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                        btnOk.doClick();
+                        e.consume();
+                    }
+                }
+            });
             GridBagConstraints gbc_inputType = new GridBagConstraints();
             gbc_inputType.fill = GridBagConstraints.HORIZONTAL;
             gbc_inputType.insets = new Insets(1, 1, 1, 1);
@@ -236,6 +259,15 @@ public class EditPropsDialog extends JDialog {
                 inputNumber.setText("");
             }
             inputNumber.setFont(new Font("Tahoma", Font.PLAIN, 11));
+            inputNumber.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyPressed(KeyEvent e) {
+                    if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                        btnOk.doClick();
+                        e.consume();
+                    }
+                }
+            });
             GridBagConstraints gbc_inputNumber = new GridBagConstraints();
             gbc_inputNumber.fill = GridBagConstraints.HORIZONTAL;
             gbc_inputNumber.insets = new Insets(1, 1, 1, 1);
@@ -244,6 +276,28 @@ public class EditPropsDialog extends JDialog {
             gbc_inputNumber.weightx = 1;
             gbc_inputNumber.weighty = 0;
             inputPanel.add(inputNumber, gbc_inputNumber);
+            inputNumber.addFocusListener(new FocusListener() {
+                @Override
+                public void focusLost(FocusEvent e) {
+                    String unformattedStr = inputNumber.getText();
+                    NumberFormat formatter = NumberFormat.getIntegerInstance();
+                    Number formattedNumber = null;
+                    try {
+                        formattedNumber = formatter.parse(unformattedStr);
+                    } catch (ParseException e1) {
+                    }
+                    if (formattedNumber != null && formattedNumber.intValue() > 0
+                            && formattedNumber.intValue() < Integer.MAX_VALUE) {
+                        String formattedStr = String.format("%d", formattedNumber);
+                        inputNumber.setText(formattedStr);
+                    } else {
+                        inputNumber.setText("");
+                    }
+                }
+                @Override
+                public void focusGained(FocusEvent e) {
+                }
+            });
         }
     }
 
@@ -266,8 +320,10 @@ public class EditPropsDialog extends JDialog {
     private void okButton() {
         name = inputName.getText();
         desc = inputDesc.getText();
-        gpxType = inputGPXType.getText();
-        number = Integer.parseInt(inputNumber.getText());
+        if (gpxObject.isRoute() || gpxObject.isTrack()) {
+            gpxType = (inputGPXType.getText().equals("")) ? null : inputGPXType.getText(); 
+            number = (inputNumber.getText().equals("")) ? null : Integer.parseInt(inputNumber.getText());
+        }
         setVisible(false);
     }
 
