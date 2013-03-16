@@ -1620,6 +1620,10 @@ public class GPXCreator extends JComponent {
         }
         width += tableProperties.getIntercellSpacing().width;
         int tableWidth = width + 100;
+        if (scrollPaneProperties.getVerticalScrollBar().isVisible()) {
+            tableWidth += scrollPaneProperties.getVerticalScrollBar().getWidth();
+        }
+        
         if (tableWidth > scrollPaneProperties.getWidth()) {
             tableProperties.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
             tableProperties.getColumn("Value").setPreferredWidth(width);
