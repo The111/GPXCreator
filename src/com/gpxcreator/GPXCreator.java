@@ -218,9 +218,11 @@ public class GPXCreator extends JComponent {
         }
         frame.setIconImage(bufImg);
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        double width = screenSize.getWidth();
-        double height = screenSize.getHeight();
-        frame.setBounds(300, 188, (int) (width - 600), (int) (height - 376));
+        int screenWidth = (int) screenSize.getWidth();
+        int screenHeight = (int) screenSize.getHeight();
+        int frameWidth = (screenWidth * 2) / 3;
+        int frameHeight = (screenHeight * 2) / 3;
+        frame.setBounds(((screenWidth - frameWidth) / 2), ((screenHeight - frameHeight) / 2), frameWidth, frameHeight);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
         /* MAIN SPLIT PANE
@@ -959,40 +961,15 @@ public class GPXCreator extends JComponent {
         final TileSource bingAerial = new BingAerialTileSource();
         final TileSource mapQuestOsm = new MapQuestOsmTileSource();
         final TileSource mapQuestOpenAerial = new MapQuestOpenAerialTileSource();
-        final TileSource googleMaps = new TemplatedTMSTileSource(
-                "Google Maps",
-                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=m&x={x}&y={y}&z={zoom}", 22);
-        final TileSource googleSat = new TemplatedTMSTileSource(
-                "Google Satellite",
-                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=s&x={x}&y={y}&z={zoom}", 21);
-        final TileSource googleSatMap = new TemplatedTMSTileSource(
-                "Google Satellite + Labels",
-                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=y&x={x}&y={y}&z={zoom}", 21);
-        final TileSource googleTerrain = new TemplatedTMSTileSource(
-                "Google Terrain",
-                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=p&x={x}&y={y}&z={zoom}", 15);
-        final TileSource esriTopoUSA = new TemplatedTMSTileSource(
-                "Esri Topo USA",
-                "http://server.arcgisonline.com/ArcGIS/rest/services/" +
-                "USA_Topo_Maps/MapServer/tile/{zoom}/{y}/{x}.jpg", 15);
-        final TileSource esriTopoWorld = new TemplatedTMSTileSource(
-                "Esri Topo World",
-                "http://server.arcgisonline.com/ArcGIS/rest/services/" +
-                "World_Topo_Map/MapServer/tile/{zoom}/{y}/{x}.jpg", 19);
         
         comboBoxTileSource = new JComboBox<String>();
         comboBoxTileSource.setMaximumRowCount(18);
+        
         comboBoxTileSource.addItem("OpenStreetMap");
         comboBoxTileSource.addItem("OpenCycleMap");
         comboBoxTileSource.addItem("Bing Aerial");
         comboBoxTileSource.addItem("MapQuest-OSM");
         comboBoxTileSource.addItem("MapQuest Open Aerial");
-        comboBoxTileSource.addItem("Google Maps");
-        comboBoxTileSource.addItem("Google Satellite");
-        comboBoxTileSource.addItem("Google Satellite + Labels");
-        comboBoxTileSource.addItem("Google Terrain");
-        comboBoxTileSource.addItem("Esri Topo USA");
-        comboBoxTileSource.addItem("Esri Topo World");
         
         comboBoxTileSource.addActionListener(new ActionListener() {
             @Override
@@ -1014,6 +991,52 @@ public class GPXCreator extends JComponent {
                     case "MapQuest Open Aerial":
                         mapPanel.setTileSource(mapQuestOpenAerial);
                         break;
+                }
+            }
+        });
+        
+        comboBoxTileSource.setFocusable(false);
+        comboBoxTileSource.setPreferredSize(new Dimension(150, 24));
+        comboBoxTileSource.setMinimumSize(new Dimension(50, 24));
+        comboBoxTileSource.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        comboBoxTileSource.setMaximumSize(new Dimension(20, 24));
+        toolBarMain.add(comboBoxTileSource);
+        
+        // the tile sources below are not licensed for public usage
+        
+        /*final TileSource googleMaps = new TemplatedTMSTileSource(
+                "Google Maps",
+                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=m&x={x}&y={y}&z={zoom}", 22);
+        final TileSource googleSat = new TemplatedTMSTileSource(
+                "Google Satellite",
+                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=s&x={x}&y={y}&z={zoom}", 21);
+        final TileSource googleSatMap = new TemplatedTMSTileSource(
+                "Google Satellite + Labels",
+                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=y&x={x}&y={y}&z={zoom}", 21);
+        final TileSource googleTerrain = new TemplatedTMSTileSource(
+                "Google Terrain",
+                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=p&x={x}&y={y}&z={zoom}", 15);
+        final TileSource esriTopoUSA = new TemplatedTMSTileSource(
+                "Esri Topo USA",
+                "http://server.arcgisonline.com/ArcGIS/rest/services/" +
+                "USA_Topo_Maps/MapServer/tile/{zoom}/{y}/{x}.jpg", 15);
+        final TileSource esriTopoWorld = new TemplatedTMSTileSource(
+                "Esri Topo World",
+                "http://server.arcgisonline.com/ArcGIS/rest/services/" +
+                "World_Topo_Map/MapServer/tile/{zoom}/{y}/{x}.jpg", 19);
+
+        comboBoxTileSource.addItem("Google Maps");
+        comboBoxTileSource.addItem("Google Satellite");
+        comboBoxTileSource.addItem("Google Satellite + Labels");
+        comboBoxTileSource.addItem("Google Terrain");
+        comboBoxTileSource.addItem("Esri Topo USA");
+        comboBoxTileSource.addItem("Esri Topo World");
+        
+        comboBoxTileSource.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String selected = (String) comboBoxTileSource.getSelectedItem();
+                switch (selected) {
                     case "Google Maps":
                         mapPanel.setTileSource(googleMaps);
                         break;
@@ -1034,14 +1057,7 @@ public class GPXCreator extends JComponent {
                         break;
                 }
             }
-        });
-        
-        comboBoxTileSource.setFocusable(false);
-        comboBoxTileSource.setPreferredSize(new Dimension(150, 24));
-        comboBoxTileSource.setMinimumSize(new Dimension(50, 24));
-        comboBoxTileSource.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        comboBoxTileSource.setMaximumSize(new Dimension(20, 24));
-        toolBarMain.add(comboBoxTileSource);
+        });*/
         
         /* LAT/LON INPUT/SEEKER
          * --------------------------------------------------------------------------------------------------------- */
@@ -1200,7 +1216,7 @@ public class GPXCreator extends JComponent {
          * --------------------------------------------------------------------------------------------------------- */
         
         // button for quick easy debugging
-        JButton debug = new JButton("debug");
+        /*JButton debug = new JButton("debug");
         debug.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -1209,7 +1225,7 @@ public class GPXCreator extends JComponent {
         });
         debug.setFocusable(false);
         toolBarMain.addSeparator();
-        toolBarMain.add(debug);
+        toolBarMain.add(debug);*/
         
         /*java.util.Properties systemProperties = System.getProperties();
         systemProperties.setProperty("http.proxyHost", "proxy1.lmco.com");
