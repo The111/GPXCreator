@@ -88,7 +88,6 @@ import org.openstreetmap.gui.jmapviewer.tilesources.BingAerialTileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOpenAerialTileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOsmTileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.OsmTileSource;
-import org.openstreetmap.gui.jmapviewer.tilesources.TemplatedTMSTileSource;
 
 import com.gpxcreator.gpxpanel.GPXFile;
 import com.gpxcreator.gpxpanel.GPXObject;
@@ -1341,6 +1340,14 @@ public class GPXCreator extends JComponent {
         int returnVal = chooserFileSave.showSaveDialog(frame);
         if (returnVal == JFileChooser.APPROVE_OPTION) {
             fileSave = chooserFileSave.getSelectedFile();
+            String fileName = fileSave.getName();
+            int lc = fileName.length() - 1;
+            if (fileName.charAt(lc--) != 'x' || fileName.charAt(lc--) != 'p'||
+                    fileName.charAt(lc--) != 'g'|| fileName.charAt(lc) != '.') {
+                String dir = fileSave.getParent();        
+                String newName = dir + "/" + fileName + ".gpx";
+                fileSave = new File(newName);
+            }
             if (fileSave.exists()) {
                 int response = JOptionPane.showConfirmDialog(frame, "File already exists. Do you want to replace it?",
                         "Confirm file overwrite", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
