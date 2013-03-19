@@ -78,7 +78,7 @@ public class WaypointGroup extends GPXObject {
     
     public void addWaypoint(Waypoint wpt, boolean correctElevation) {
         if (correctElevation) {
-            String url = "http://open.mapquestapi.com/elevation/v1/profile";
+            String url = "http://open.mapquestapi.com/elevation/v1/profile?key=Fmjtd%7Cluub2lu12u%2Ca2%3Do5-96y5qz&";
             String charset = "UTF-8";
             String param1 = String.format("%.6f", wpt.getLat()) + "," + String.format("%.6f", wpt.getLon());
             String param2 = "m";
@@ -91,7 +91,7 @@ public class WaypointGroup extends GPXObject {
                 query = String.format("latLngCollection=%s&unit=%s",
                         URLEncoder.encode(param1, charset),
                         URLEncoder.encode(param2, charset));
-                connection = new URL(url + "?" + query).openConnection();
+                connection = new URL(url + query).openConnection();
                 connection.setRequestProperty("Accept-Charset", charset);
                 response = connection.getInputStream();
                 br = new BufferedReader((Reader) new InputStreamReader(response, "UTF-8"));
@@ -142,7 +142,8 @@ public class WaypointGroup extends GPXObject {
     }
 
     // returns false if the query fails for any reason
-    public EleCorrectedStatus correctElevation(boolean doCleanse) { // POST KVP (remember: had problems with POST XML and useFilter parameter)
+    // POST KVP (remember: had problems with POST XML and useFilter parameter)
+    public EleCorrectedStatus correctElevation(boolean doCleanse) {
         if (waypoints.size() < 1) {
             return EleCorrectedStatus.FAILED;
         }
@@ -151,7 +152,8 @@ public class WaypointGroup extends GPXObject {
         latLngCollection += rtept.getLat() + "," + rtept.getLon();
         for (int i = 1; i < waypoints.size(); i++) {
             rtept = waypoints.get(i);
-            latLngCollection += "," + rtept.getLat() + "," + rtept.getLon();
+            latLngCollection += "," + String.format("%.6f", rtept.getLat()) +
+                                "," + String.format("%.6f", rtept.getLon());
         }
         String url = "http://open.mapquestapi.com/elevation/v1/profile";
         String charset = "UTF-8";
@@ -166,25 +168,26 @@ public class WaypointGroup extends GPXObject {
         BufferedReader br = null;
         StringBuilder builder = new StringBuilder();
         try {
-            query = String.format("&inFormat=%s" + "&latLngCollection=%s" + "&outFormat=%s" + "&useFilter=%s",
+            query = "key=Fmjtd%7Cluub2lu12u%2Ca2%3Do5-96y5qz" + 
+                    String.format("&inFormat=%s" + "&latLngCollection=%s" + "&outFormat=%s" + "&useFilter=%s",
                     URLEncoder.encode(param1, charset),
                     URLEncoder.encode(param2, charset),
                     URLEncoder.encode(param3, charset),
                     URLEncoder.encode(param4, charset));
-                    connection = new URL(url).openConnection();
-                    connection.setDoOutput(true);
-                    connection.setRequestProperty("Accept-Charset", charset);
-                    connection.setRequestProperty(
-                            "Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
-                    output = connection.getOutputStream();
-                    output.write(query.getBytes(charset));
-                    output.close();
-                    response = connection.getInputStream();
-                    br = new BufferedReader((Reader) new InputStreamReader(response, "UTF-8"));
-                    for(String line=br.readLine(); line!=null; line=br.readLine()) {
-                        builder.append(line);
-                        builder.append('\n');
-                    }
+            connection = new URL(url).openConnection();
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Accept-Charset", charset);
+            connection.setRequestProperty(
+                    "Content-Type", "application/x-www-form-urlencoded;charset=" + charset);
+            output = connection.getOutputStream();
+            output.write(query.getBytes(charset));
+            output.close();
+            response = connection.getInputStream();
+            br = new BufferedReader((Reader) new InputStreamReader(response, "UTF-8"));
+            for(String line=br.readLine(); line!=null; line=br.readLine()) {
+                builder.append(line);
+                builder.append('\n');
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -108,6 +108,7 @@ public class GPXCreator extends JComponent {
     private JFrame frame;
     private JPanel glassPane;
     private JLabel glassPaneStatus;
+    private static String lookAndFeel;
         private JToolBar toolBarMain;       // NORTH
             private boolean fileIOHappening;
             private JButton btnFileNew;    
@@ -120,6 +121,7 @@ public class GPXCreator extends JComponent {
             private File fileSave;
             private JButton btnObjectDelete;
             private JButton btnEditProperties;
+            private JToggleButton tglPathFinder;
             private JToggleButton tglAddPoints;
             private JToggleButton tglDelPoints;
             private JToggleButton tglSplitTrackseg;
@@ -163,7 +165,8 @@ public class GPXCreator extends JComponent {
      */
     public static void main(String[] args) {
         try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            lookAndFeel = UIManager.getSystemLookAndFeelClassName();
+            UIManager.setLookAndFeel(lookAndFeel);
         } catch (Throwable e) {
             e.printStackTrace();
         }
@@ -347,7 +350,11 @@ public class GPXCreator extends JComponent {
         try {
             UIManager.setLookAndFeel("javax.swing.plaf.metal.MetalLookAndFeel");
             SwingUtilities.updateComponentTreeUI(tree);
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            UIManager.setLookAndFeel(lookAndFeel);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -389,6 +396,7 @@ public class GPXCreator extends JComponent {
         
         /* EXPLORER TREE SCROLLPANE
          * --------------------------------------------------------------------------------------------------------- */
+        UIManager.put("ScrollBar.minimumThumbSize", new Dimension(16, 16)); // prevent Windows L&F scroll thumb bug
         scrollPaneExplorer = new JScrollPane(tree);
         scrollPaneExplorer.setAlignmentY(Component.TOP_ALIGNMENT);
         scrollPaneExplorer.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -439,9 +447,6 @@ public class GPXCreator extends JComponent {
         tableProperties.setFillsViewportHeight(true);
         tableProperties.setTableHeader(null);
         tableProperties.setEnabled(false);
-        tableProperties.getColumn("Name").setPreferredWidth(100);
-        tableProperties.getColumn("Name").setMinWidth(100);
-        tableProperties.getColumn("Name").setMaxWidth(100);
         tableProperties.getColumnModel().setColumnMargin(0);
         
         /* PROPERTIES TABLE SCROLLPANE
@@ -455,6 +460,7 @@ public class GPXCreator extends JComponent {
         /* MAIN TOOLBAR
          * --------------------------------------------------------------------------------------------------------- */
         toolBarMain = new JToolBar();
+        toolBarMain.setLayout(new BoxLayout(toolBarMain, BoxLayout.X_AXIS));
         toolBarMain.setFloatable(false);
         toolBarMain.setBorder(new EtchedBorder(EtchedBorder.LOWERED, null, null));
         frame.getContentPane().add(toolBarMain, BorderLayout.NORTH);
@@ -628,6 +634,113 @@ public class GPXCreator extends JComponent {
             }
         });
         toolBarMain.add(btnEditProperties);
+        
+        /* PATHFINDER BUTTON
+         * --------------------------------------------------------------------------------------------------------- */
+        tglPathFinder = new JToggleButton("");
+        tglPathFinder.setToolTipText("Find path");
+        tglPathFinder.setFocusable(false);
+        tglPathFinder.setIcon(new ImageIcon(
+                GPXCreator.class.getResource("/com/gpxcreator/icons/path-find.png")));
+        tglPathFinder.setEnabled(false);
+        tglPathFinder.setDisabledIcon(new ImageIcon(
+                GPXCreator.class.getResource("/com/gpxcreator/icons/path-find-disabled.png")));
+        mapPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (tglPathFinder.isSelected() && activeGPXObject != null && !mouseOverLink) {
+                    int zoom = mapPanel.getZoom();
+                    int x = e.getX();
+                    int y = e.getY();
+                    Point mapCenter = mapPanel.getCenter();
+                    int xStart = mapCenter.x - mapPanel.getWidth() / 2;
+                    int yStart = mapCenter.y - mapPanel.getHeight() / 2;
+                    final double lat = OsmMercator.YToLat(yStart + y, zoom);
+                    final double lon = OsmMercator.XToLon(xStart + x, zoom);
+                    
+                    Route route = null;
+                    DefaultMutableTreeNode gpxFileNode = null;
+                    if (activeGPXObject.isGPXFileWithOneRoute()) {
+                        route = ((GPXFile) activeGPXObject).getRoutes().get(0);
+                        gpxFileNode = currSelection;
+                    } else if (activeGPXObject.isRoute()) {
+                        route = (Route) activeGPXObject;
+                        gpxFileNode = (DefaultMutableTreeNode) currSelection.getParent();
+                    }
+                    final Route finalRoute = route;
+                    final DefaultMutableTreeNode finalGPXFileNode = gpxFileNode;
+                    
+                    if (route.getPath().getNumPts() == 0) { // route is empty, so add first point
+                        Waypoint wpt = new Waypoint(lat, lon);
+                        route.getPath().addWaypoint(wpt, false);
+                    } else { // route is not empty, so find path from current end to the point that was clicked
+                        SwingWorker<Void, Void> pathFindWorker = new SwingWorker<Void, Void>() {
+                            @Override
+                            public Void doInBackground() {
+                                glassPane.setVisible(true);
+                                glassPaneStatus.setText("finding path...");
+                                glassPane.setCursor(new Cursor(Cursor.WAIT_CURSOR));
+                                tglPathFinder.setEnabled(false);
+                                btnCorrectEle.setEnabled(false);
+                                SwingUtilities.invokeLater(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        frame.repaint();
+                                    }
+                                });
+                                Waypoint pathfindStart = finalRoute.getPath().getEnd();
+                                double startLat = pathfindStart.getLat();
+                                double startLon = pathfindStart.getLon();
+                                
+                                List<Waypoint> newPathFound = PathFinder.findPath(startLat, startLon, lat, lon);
+                                
+                                for (Waypoint wpt : newPathFound) {
+                                    finalRoute.getPath().addWaypoint(wpt, false);                            
+                                }
+                                
+                                finalRoute.getPath().correctElevation(true);
+                                return null;
+                            }
+                            @Override
+                            protected void done() {
+                                Object gpxFileObject = finalGPXFileNode.getUserObject();
+                                GPXFile gpxFile = (GPXFile) gpxFileObject;
+                                gpxFile.updateAllProperties();
+                                
+                                updateButtonVisibility();
+                                glassPane.setVisible(false);
+                                glassPaneStatus.setText("");
+                                glassPane.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+                                mapPanel.repaint();
+                                updatePropsTable();
+                            }
+                        };
+                        pathFindWorker.execute();
+                    }
+                    mapPanel.repaint();
+                    updatePropsTable();
+                }
+            }
+        });
+        tglPathFinder.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    deselectAllToggles(tglPathFinder);
+                    mapCursor = new Cursor(Cursor.CROSSHAIR_CURSOR);
+                    
+                    if (activeGPXObject.isGPXFileWithNoRoutes()) {
+                        Route route = ((GPXFile) activeGPXObject).addRoute();
+                        DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(route);
+                        treeModel.insertNodeInto(newNode, currSelection, 0);
+                        updateButtonVisibility();
+                    }
+                } else {
+                    mapCursor = new Cursor(Cursor.DEFAULT_CURSOR);
+                }
+            }
+        });
+        toolBarMain.add(tglPathFinder);
         
         /* ADD POINTS BUTTON
          * --------------------------------------------------------------------------------------------------------- */
@@ -955,6 +1068,7 @@ public class GPXCreator extends JComponent {
         /* TILE SOURCE SELECTOR
          * --------------------------------------------------------------------------------------------------------- */
         toolBarMain.add(Box.createHorizontalGlue());
+        
         final TileSource openStreetMap = new OsmTileSource.Mapnik();
         final TileSource openCycleMap = new OsmTileSource.CycleMap(); 
         final TileSource bingAerial = new BingAerialTileSource();
@@ -995,10 +1109,6 @@ public class GPXCreator extends JComponent {
         });
         
         comboBoxTileSource.setFocusable(false);
-        comboBoxTileSource.setPreferredSize(new Dimension(150, 24));
-        comboBoxTileSource.setMinimumSize(new Dimension(50, 24));
-        comboBoxTileSource.setAlignmentX(Component.RIGHT_ALIGNMENT);
-        comboBoxTileSource.setMaximumSize(new Dimension(20, 24));
         toolBarMain.add(comboBoxTileSource);
         
         // the tile sources below are not licensed for public usage
@@ -1057,6 +1167,8 @@ public class GPXCreator extends JComponent {
                 }
             }
         });*/
+        
+        comboBoxTileSource.setMaximumSize(comboBoxTileSource.getPreferredSize());
         
         /* LAT/LON INPUT/SEEKER
          * --------------------------------------------------------------------------------------------------------- */
@@ -1205,9 +1317,9 @@ public class GPXCreator extends JComponent {
         });
         
         Component horizontalGlue = Box.createHorizontalGlue();
-        horizontalGlue.setPreferredSize(new Dimension(2, 0));
-        horizontalGlue.setMinimumSize(new Dimension(2, 0));
         horizontalGlue.setMaximumSize(new Dimension(2, 0));
+        horizontalGlue.setMinimumSize(new Dimension(2, 0));
+        horizontalGlue.setPreferredSize(new Dimension(2, 0));
         toolBarMain.add(horizontalGlue);
         toolBarMain.add(tglLatLonFocus);
         
@@ -1349,7 +1461,8 @@ public class GPXCreator extends JComponent {
                 fileSave = new File(newName);
             }
             if (fileSave.exists()) {
-                int response = JOptionPane.showConfirmDialog(frame, "File already exists. Do you want to replace it?",
+                int response = JOptionPane.showConfirmDialog(frame, "<html>" + fileSave.getName() +
+                        " already exists.<br>Do you want to replace it?</html>",
                         "Confirm file overwrite", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE);
                 if (response == JOptionPane.CANCEL_OPTION || response == JOptionPane.CLOSED_OPTION) {
                     return; // cancel the save operation
@@ -1619,28 +1732,38 @@ public class GPXCreator extends JComponent {
     }
     
     public void updatePropTableWidths() {
-        int width = 0;
+        int nameWidth = 0;
+        for (int row = 0; row < tableProperties.getRowCount(); row++) {
+            TableCellRenderer renderer = tableProperties.getCellRenderer(row, 0);
+            Component comp = tableProperties.prepareRenderer(renderer, row, 0);
+            nameWidth = Math.max (comp.getPreferredSize().width, nameWidth);
+        }
+        nameWidth += tableProperties.getIntercellSpacing().width;
+        nameWidth += 10;
+        tableProperties.getColumn("Name").setMaxWidth(nameWidth);
+        tableProperties.getColumn("Name").setMinWidth(nameWidth);
+        tableProperties.getColumn("Name").setPreferredWidth(nameWidth);
+        
+        int valueWidth = 0;
         for (int row = 0; row < tableProperties.getRowCount(); row++) {
             TableCellRenderer renderer = tableProperties.getCellRenderer(row, 1);
             Component comp = tableProperties.prepareRenderer(renderer, row, 1);
-            width = Math.max (comp.getPreferredSize().width, width);
+            valueWidth = Math.max (comp.getPreferredSize().width, valueWidth);
         }
-        width += tableProperties.getIntercellSpacing().width;
-        int tableWidth = width + 100;
+        valueWidth += tableProperties.getIntercellSpacing().width;
+        int tableWidth = valueWidth + nameWidth;
         if (scrollPaneProperties.getVerticalScrollBar().isVisible()) {
             tableWidth += scrollPaneProperties.getVerticalScrollBar().getWidth();
         }
-        
         if (tableWidth > scrollPaneProperties.getWidth()) {
             tableProperties.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-            tableProperties.getColumn("Value").setPreferredWidth(width);
-            tableProperties.getColumn("Value").setMinWidth(width);
+            valueWidth += 10;
         } else {
             tableProperties.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
-            width = scrollPaneProperties.getWidth() + 100;
-            tableProperties.getColumn("Value").setPreferredWidth(width);
-            tableProperties.getColumn("Value").setMinWidth(width);
+            valueWidth = scrollPaneProperties.getWidth() + nameWidth;
         }
+        tableProperties.getColumn("Value").setMinWidth(valueWidth);
+        tableProperties.getColumn("Value").setPreferredWidth(valueWidth);
     }
     
     public void clearPropsTable() {
@@ -1736,6 +1859,7 @@ public class GPXCreator extends JComponent {
         toggles.add(tglDelPoints);
         toggles.add(tglSplitTrackseg);
         toggles.add(tglLatLonFocus);
+        toggles.add(tglPathFinder);
         
         for (JToggleButton toggle : toggles) {
             if (toggle != exceptThisOne && toggle.isSelected()) {
@@ -1757,6 +1881,7 @@ public class GPXCreator extends JComponent {
         btnEleChart.setEnabled(false);
         btnSpeedChart.setEnabled(false);
         btnEditProperties.setEnabled(false);
+        tglPathFinder.setEnabled(false);
         
         if (currSelection != null) {
             btnFileSave.setEnabled(true);
@@ -1780,6 +1905,9 @@ public class GPXCreator extends JComponent {
             }
             if (o.isGPXFile() || o.isRoute() || o.isTrack()) {
                 btnEditProperties.setEnabled(true);
+            }
+            if (o.isRoute() || o.isGPXFileWithOneRoute() || o.isGPXFileWithNoRoutes()) {
+                tglPathFinder.setEnabled(true);
             }
         }
         
