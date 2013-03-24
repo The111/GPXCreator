@@ -203,6 +203,12 @@ public class GPXPanel extends JMapViewer {
     }
     
     private void paintPath(Graphics2D g2d, WaypointGroup waypointPath) {
+        Point maxXY = getMapPosition(waypointPath.getMinLat(), waypointPath.getMaxLon(), false);
+        Point minXY = getMapPosition(waypointPath.getMaxLat(), waypointPath.getMinLon(), false);
+        if (maxXY.x < 0 || maxXY.y < 0 || minXY.x > getWidth() || minXY.y > getHeight()) {
+            return; // don't paint paths that are completely off screen
+        }
+
         g2d.setColor(waypointPath.getColor());
         if (waypointPath.getNumPts() >= 2) {
             List<Waypoint> waypoints = waypointPath.getWaypoints();
@@ -217,7 +223,6 @@ public class GPXPanel extends JMapViewer {
             g2d.setStroke(new BasicStroke(5.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             g2d.setColor(Color.BLACK);
             path = new GeneralPath();
-            path.setWindingRule(GeneralPath.WIND_NON_ZERO);
             rtept = waypointPath.getStart();
             point = getMapPosition(rtept.getLat(), rtept.getLon(), false);
             path.moveTo(point.x, point.y);
@@ -226,6 +231,30 @@ public class GPXPanel extends JMapViewer {
                 point = getMapPosition(rtept.getLat(), rtept.getLon(), false);
                 path.lineTo(point.x, point.y);
             }
+            
+            // hack to fix zero degree angle join rounds (begin)
+            Waypoint w1, w2, w3;
+            Point p1, p2, p3;
+            double d1, d2;
+            w1 = waypoints.get(0);
+            w2 = waypoints.get(1);
+            p1 = getMapPosition(w1.getLat(), w1.getLon(), false);
+            p2 = getMapPosition(w2.getLat(), w2.getLon(), false);
+            for (int i = 2; i < waypoints.size(); i++) {
+                w3 = waypoints.get(i);
+                p3 = getMapPosition(w3.getLat(), w3.getLon(), false);
+                d1 = Math.sqrt(Math.pow((p2.x - p3.x), 2) + Math.pow((p2.y - p3.y), 2));
+                d2 = Math.sqrt(Math.pow((p1.x - p3.x), 2) + Math.pow((p1.y - p3.y), 2)); 
+                if ((d1 / d2) > 99) {
+                    path.moveTo(p2.x, p2.y);
+                    path.lineTo(p2.x, p2.y);
+                }
+                w1 = w2;
+                w2 = w3;
+                p1 = p2;
+                p2 = p3;
+            }
+            // hack (end)
             g2d.draw(path);
     
             // draw colored route

@@ -21,6 +21,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
@@ -89,6 +90,7 @@ import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOpenAerialTileSource
 import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOsmTileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.OsmTileSource;
 
+import com.gpxcreator.PathFinder.PathFindType;
 import com.gpxcreator.gpxpanel.GPXFile;
 import com.gpxcreator.gpxpanel.GPXObject;
 import com.gpxcreator.gpxpanel.GPXPanel;
@@ -122,6 +124,7 @@ public class GPXCreator extends JComponent {
             private JButton btnObjectDelete;
             private JButton btnEditProperties;
             private JToggleButton tglPathFinder;
+            private SwingWorker<Void, Void> pathFindWorker;
             private JToggleButton tglAddPoints;
             private JToggleButton tglDelPoints;
             private JToggleButton tglSplitTrackseg;
@@ -153,12 +156,27 @@ public class GPXCreator extends JComponent {
                         private JTable tableProperties;
                         private SimpleDateFormat sdf;
             private GPXPanel mapPanel;              // RIGHT
-            private GPXObject activeGPXObject;
-            private Cursor mapCursor;
-            private boolean mouseOverLink;
-            private WaypointGroup activeWptGrp;
-            private DefaultMutableTreeNode activeTracksegNode;
-            private Waypoint activeWpt;
+                private JPanel panelRoutingOptions;
+                private JLabel lblMapQuestFoot;
+                private JLabel lblMapQuestBike;
+                private JLabel lblYOURSFoot;
+                private JLabel lblYOURSBike;
+                private List<JLabel> lblsRoutingOptions;
+                private PathFinder pathFinder;
+                private PathFinder pathFinderMapquest;
+                private PathFinder pathFinderYOURS;
+                private PathFinder.PathFindType pathFindType;
+                private JPanel panelRoutingCancel;
+                private JLabel lblRoutingCancel;
+    private GPXObject activeGPXObject;
+    private Cursor mapCursor;
+    private boolean mouseOverLink;
+    private WaypointGroup activeWptGrp;
+    private DefaultMutableTreeNode activeTracksegNode;
+    private Waypoint activeWpt;
+    private Color transparentYellow;
+    private Color transparentGrey;
+    private Color transparentRed;
 
     /**
      * Launch the application.
@@ -198,6 +216,9 @@ public class GPXCreator extends JComponent {
         /* MAIN FRAME
          * --------------------------------------------------------------------------------------------------------- */
         frame = new JFrame("GPX Creator");
+        transparentGrey = new Color(160, 160, 160, 192);
+        transparentYellow = new Color(177, 177, 25, 192);
+        transparentRed = new Color(177, 25, 25, 192);
         glassPane = new JPanel();
         glassPane.setOpaque(false);
         frame.setGlassPane(glassPane);
@@ -206,7 +227,7 @@ public class GPXCreator extends JComponent {
         glassPaneStatus.setHorizontalAlignment(SwingConstants.CENTER);
         glassPaneStatus.setFont(new Font("Segoe UI", Font.PLAIN, 22));
         glassPaneStatus.setOpaque(true);
-        glassPaneStatus.setBackground(new Color(177, 177, 25, 127));
+        glassPaneStatus.setBackground(transparentYellow);
         glassPaneStatus.setForeground(Color.BLACK);
         glassPane.add(glassPaneStatus, BorderLayout.SOUTH);
         InputStream in = GPXCreator.class.getResourceAsStream("/com/gpxcreator/icons/gpx-creator.png");
@@ -249,6 +270,9 @@ public class GPXCreator extends JComponent {
         /* MAP PANEL
          * --------------------------------------------------------------------------------------------------------- */
         mapPanel = new GPXPanel();
+        mapPanel.setLayout(new BoxLayout(mapPanel, BoxLayout.X_AXIS));
+        mapPanel.setAlignmentY(Component.TOP_ALIGNMENT);
+        mapPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         mapPanel.setDisplayPositionByLatLon(36, -98, 4); // U! S! A!
         mapPanel.setZoomContolsVisible(false);
         try {
@@ -283,6 +307,145 @@ public class GPXCreator extends JComponent {
                 }
             }
         });
+
+        MouseListener routingControlsHoverListener = new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                mapPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                if (e.getSource().equals(lblRoutingCancel)) {
+                    glassPane.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                }
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                mapPanel.setCursor(mapCursor);
+                if (e.getSource().equals(lblRoutingCancel)) {
+                    glassPane.setCursor(new Cursor(Cursor.WAIT_CURSOR));
+                }
+            }
+        };
+        
+        MouseListener routingControlsClickListener = new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                JLabel clicked = (JLabel) e.getSource();
+                if (clicked.equals(lblRoutingCancel)) {
+                    try {
+                        pathFindWorker.cancel(true);
+                        updateButtonVisibility();
+                        glassPane.setVisible(false);
+                        glassPaneStatus.setText("");
+                        glassPane.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+                        mapPanel.repaint();
+                        updatePropsTable();
+                    } catch (Exception e1) {
+                        
+                    }
+                    panelRoutingCancel.repaint();
+                    return;
+                }
+                
+                for (JLabel lbl : lblsRoutingOptions) {
+                    lbl.setBackground(transparentGrey);
+                }
+                clicked.setBackground(transparentYellow);
+                panelRoutingOptions.repaint();
+                if (clicked.equals(lblMapQuestFoot)) {
+                    pathFinder = pathFinderMapquest;
+                    pathFindType = PathFindType.FOOT;
+                } else if (clicked.equals(lblMapQuestBike)) {
+                    pathFinder = pathFinderMapquest;
+                    pathFindType = PathFindType.BIKE;
+                } else if (clicked.equals(lblYOURSFoot)) {
+                    pathFinder = pathFinderYOURS;
+                    pathFindType = PathFindType.FOOT;
+                } else if (clicked.equals(lblYOURSBike)) {
+                    pathFinder = pathFinderYOURS;
+                    pathFindType = PathFindType.BIKE;
+                }
+            }
+        };
+
+        // pathfinding cancel panel (begin)
+        panelRoutingCancel = new JPanel();
+        panelRoutingCancel.setLayout(new BoxLayout(panelRoutingCancel, BoxLayout.Y_AXIS));
+        panelRoutingCancel.setOpaque(false);
+        panelRoutingCancel.setBorder(new CompoundBorder(
+                new EmptyBorder(10, 10, 10, 10), new LineBorder(new Color(105, 105, 105))));
+        panelRoutingCancel.setAlignmentY(Component.TOP_ALIGNMENT);
+        mapPanel.add(panelRoutingCancel);
+        
+        lblRoutingCancel = new JLabel("Cancel Pathfinding Operation");
+        lblRoutingCancel.setBorder(new CompoundBorder(
+                new LineBorder(new Color(105, 105, 105)), new EmptyBorder(2, 4, 2, 4)));
+        lblRoutingCancel.setAlignmentY(Component.TOP_ALIGNMENT);
+        lblRoutingCancel.setOpaque(true);
+        lblRoutingCancel.setBackground(transparentRed);
+        panelRoutingCancel.add(lblRoutingCancel);
+
+        Dimension dim = new Dimension(
+                lblRoutingCancel.getPreferredSize().width, lblRoutingCancel.getPreferredSize().height);
+        lblRoutingCancel.setMaximumSize(dim);
+        lblRoutingCancel.setMinimumSize(dim);
+        lblRoutingCancel.setPreferredSize(dim);
+        lblRoutingCancel.addMouseListener(routingControlsHoverListener);
+        lblRoutingCancel.addMouseListener(routingControlsClickListener);
+        
+        panelRoutingCancel.setVisible(false);
+        // pathfinding cancel panel (end)
+        
+        // pathfinding options panel (begin)
+        panelRoutingOptions = new JPanel();
+        panelRoutingOptions.setLayout(new BoxLayout(panelRoutingOptions, BoxLayout.Y_AXIS));
+        panelRoutingOptions.setOpaque(false);
+        panelRoutingOptions.setBorder(new CompoundBorder(
+                new EmptyBorder(10, 10, 10, 10), new LineBorder(new Color(105, 105, 105))));
+        panelRoutingOptions.setAlignmentY(Component.TOP_ALIGNMENT);
+        mapPanel.add(Box.createHorizontalGlue());
+        mapPanel.add(panelRoutingOptions);
+        
+        lblMapQuestFoot = new JLabel("MapQuest (foot)");
+        lblMapQuestBike = new JLabel("MapQuest (bike)");
+        lblYOURSFoot = new JLabel("YOURS (foot)");
+        lblYOURSBike = new JLabel("YOURS (bike)");
+        
+        lblsRoutingOptions = new ArrayList<JLabel>();
+        lblsRoutingOptions.add(lblMapQuestFoot);
+        lblsRoutingOptions.add(lblMapQuestBike);
+        lblsRoutingOptions.add(lblYOURSFoot);
+        lblsRoutingOptions.add(lblYOURSBike);
+        
+        for (JLabel lbl : lblsRoutingOptions) {
+            lbl.setBorder(new CompoundBorder(
+                    new LineBorder(new Color(105, 105, 105)), new EmptyBorder(2, 4, 2, 4)));
+            lbl.setAlignmentY(Component.TOP_ALIGNMENT);
+            lbl.setOpaque(true);
+            lbl.setBackground(transparentGrey);
+            panelRoutingOptions.add(lbl);
+        }
+        int maxWidth = 0;
+        int maxHeight = 0;
+        for (JLabel lbl : lblsRoutingOptions) {
+            maxWidth = Math.max(maxWidth, lbl.getPreferredSize().width);
+            maxHeight = Math.max(maxHeight, lbl.getPreferredSize().height);
+        }
+        dim = new Dimension(maxWidth, maxHeight);
+        for (JLabel lbl : lblsRoutingOptions) {
+            lbl.setMaximumSize(dim);
+            lbl.setMinimumSize(dim);
+            lbl.setPreferredSize(dim);
+            lbl.addMouseListener(routingControlsHoverListener);
+            lbl.addMouseListener(routingControlsClickListener);
+        }
+        
+        lblMapQuestFoot.setBackground(transparentYellow);
+        panelRoutingOptions.setVisible(false);
+        
+        pathFinderMapquest = new PathFinderMapQuest();
+        pathFinderYOURS = new PathFinderYOURS();
+        pathFinder = pathFinderMapquest;
+        pathFindType = PathFindType.FOOT;
+        // pathfinding options panel (end)
         
         /* SIDEBAR SPLIT PANE
         /* --------------------------------------------------------------------------------------------------------- */
@@ -364,7 +527,7 @@ public class GPXCreator extends JComponent {
             public void valueChanged(TreeSelectionEvent e) {
                 deselectAllToggles(null);
                 
-                // set selected object as current selection and active in map panel                
+                // set selected object as current selection and active in map panel 
                 currSelection = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
                 if (currSelection != null) {
                     setActiveGPXObject((GPXObject) currSelection.getUserObject());
@@ -674,12 +837,13 @@ public class GPXCreator extends JComponent {
                         Waypoint wpt = new Waypoint(lat, lon);
                         route.getPath().addWaypoint(wpt, false);
                     } else { // route is not empty, so find path from current end to the point that was clicked
-                        SwingWorker<Void, Void> pathFindWorker = new SwingWorker<Void, Void>() {
+                        pathFindWorker = new SwingWorker<Void, Void>() {
                             @Override
                             public Void doInBackground() {
                                 glassPane.setVisible(true);
                                 glassPaneStatus.setText("finding path...");
                                 glassPane.setCursor(new Cursor(Cursor.WAIT_CURSOR));
+                                panelRoutingCancel.setVisible(true);
                                 tglPathFinder.setEnabled(false);
                                 btnCorrectEle.setEnabled(false);
                                 SwingUtilities.invokeLater(new Runnable() {
@@ -692,17 +856,30 @@ public class GPXCreator extends JComponent {
                                 double startLat = pathfindStart.getLat();
                                 double startLon = pathfindStart.getLon();
                                 
-                                List<Waypoint> newPathFound = PathFinder.findPath(startLat, startLon, lat, lon);
-                                
+                                String xml = pathFinder.getXMLResponse(pathFindType, startLat, startLon, lat, lon);
+                                if (isCancelled()) {
+                                    return null;
+                                }
+                                panelRoutingCancel.setVisible(false);
+                                List<Waypoint> newPathFound = pathFinder.parseXML(xml);
+   
                                 for (Waypoint wpt : newPathFound) {
                                     finalRoute.getPath().addWaypoint(wpt, false);                            
                                 }
                                 
-                                finalRoute.getPath().correctElevation(true);
+                                finalRoute.getPath().updateLength();
+                                if (finalRoute.getPath().getLengthMiles() < 250) {
+                                    finalRoute.getPath().correctElevation(true);
+                                }
                                 return null;
                             }
                             @Override
                             protected void done() {
+                                panelRoutingCancel.setVisible(false);
+                                if (isCancelled()) {
+                                    return;
+                                }
+                                
                                 Object gpxFileObject = finalGPXFileNode.getUserObject();
                                 GPXFile gpxFile = (GPXFile) gpxFileObject;
                                 gpxFile.updateAllProperties();
@@ -735,9 +912,12 @@ public class GPXCreator extends JComponent {
                         treeModel.insertNodeInto(newNode, currSelection, 0);
                         updateButtonVisibility();
                     }
+                    panelRoutingOptions.setVisible(true);
                 } else {
                     mapCursor = new Cursor(Cursor.DEFAULT_CURSOR);
+                    panelRoutingOptions.setVisible(false);
                 }
+                mapPanel.repaint();
             }
         });
         toolBarMain.add(tglPathFinder);
@@ -777,10 +957,11 @@ public class GPXCreator extends JComponent {
                         WaypointGroup wptGrp = (WaypointGroup) activeGPXObject;
                         wptGrp.addWaypoint(wpt, false);
                     }
-                    while (!((GPXObject) currSelection.getUserObject()).isGPXFile()) {
-                        currSelection = (DefaultMutableTreeNode) currSelection.getParent();
+                    DefaultMutableTreeNode gpxFileNode = currSelection;
+                    while (!((GPXObject) gpxFileNode.getUserObject()).isGPXFile()) {
+                        gpxFileNode = (DefaultMutableTreeNode) gpxFileNode.getParent();
                     }
-                    Object gpxFileObject = currSelection.getUserObject();
+                    Object gpxFileObject = gpxFileNode.getUserObject();
                     GPXFile gpxFile = (GPXFile) gpxFileObject;
                     gpxFile.updateAllProperties();
                     
@@ -967,6 +1148,13 @@ public class GPXCreator extends JComponent {
                 if (activeGPXObject != null) {
                     updateActiveWptGrp();
                     if (activeWptGrp != null) {
+                        if (activeWptGrp.getLengthMiles() > 250) {
+                            JOptionPane.showMessageDialog(frame,
+                                    "Cannot correct elevation for paths longer than 250 miles.",
+                                    "Error",
+                                    JOptionPane.ERROR_MESSAGE);
+                            return;
+                        }
                         
                         SwingWorker<EleCorrectedStatus, Void> eleCorrWorker =
                                 new SwingWorker<EleCorrectedStatus, Void>() {
