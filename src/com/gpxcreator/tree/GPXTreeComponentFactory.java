@@ -8,11 +8,13 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 
 import javax.imageio.ImageIO;
-import javax.swing.BorderFactory;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JTree;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
 import javax.swing.tree.DefaultMutableTreeNode;
 
 import com.gpxcreator.GPXCreator;
@@ -49,12 +51,12 @@ public class GPXTreeComponentFactory {
         JLabel visIcon = new JLabel();
         visIcon.setAlignmentX(JLabel.CENTER_ALIGNMENT);
         visIcon.setAlignmentY(JLabel.CENTER_ALIGNMENT);
-        visIcon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+        visIcon.setBorder(new EmptyBorder(0, 0, 0, 4));
         
         JLabel wptIcon = new JLabel();
         wptIcon.setAlignmentX(JLabel.CENTER_ALIGNMENT);
         wptIcon.setAlignmentY(JLabel.CENTER_ALIGNMENT);
-        wptIcon.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+        wptIcon.setBorder(new EmptyBorder(0, 0, 0, 4));
         
         JLabel colorIcon = new JLabel();
         colorIcon.setAlignmentX(JLabel.CENTER_ALIGNMENT);
@@ -80,9 +82,9 @@ public class GPXTreeComponentFactory {
             }
             colorIcon.setIcon(new GPXColorIcon(gpxObject.getColor()));
             colorIcon.setOpaque(true);
-            colorIcon.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createEmptyBorder(0, 0, 0, 4),
-                    BorderFactory.createLineBorder(Color.black, 1, false)));
+            colorIcon.setBorder(new CompoundBorder(
+                    new EmptyBorder(0, 0, 0, 4),
+                    new LineBorder(Color.black, 1, false)));
             colorIcon.setBackground(Color.white);
         }
 
@@ -90,13 +92,13 @@ public class GPXTreeComponentFactory {
         text.setOpaque(true);
         if (selected) {
             text.setBackground(new Color(209, 230, 255));
-            text.setBorder(BorderFactory.createLineBorder(new Color(132, 172, 221), 1, false));
+            text.setBorder(new LineBorder(new Color(132, 172, 221), 1, false));
             if (boldSelectionStyle) {
                 text.setFont(BOLD);
             }
         } else {
             text.setBackground(Color.white);
-            text.setBorder(BorderFactory.createLineBorder(Color.white, 1, false));
+            text.setBorder(new LineBorder(Color.white, 1, false));
         }
         comp.setFocusable(false);
         comp.setBackground(Color.white);

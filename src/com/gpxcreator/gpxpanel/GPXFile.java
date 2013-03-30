@@ -103,136 +103,116 @@ public class GPXFile extends GPXObject {
             XMLStreamReader xsr = xif.createXMLStreamReader(fis);
             while (xsr.hasNext()) {
                 xsr.next();
+                String ln;
                 switch (xsr.getEventType()) {
                     case XMLStreamReader.START_ELEMENT:
-                        switch (xsr.getLocalName()) {
-                            case "gpx":
-                                break;
-                            case "metadata":
-                                inMetadata = true;
-                                break;
-                            case "rte":
-                                inRte = true;
-                                route = addRoute();
-                                path = route.getPath();
-                                break;
-                            case "trk":
-                                inTrk = true;
-                                track = new Track(this.color);
-                                this.tracks.add(track);
-                                break;
-                            case "trkseg":
-                                inTrkseg = true;
-                                path = track.addTrackseg();
-                                break;
-                            case "wpt":
-                            case "rtept":
-                            case "trkpt":
-                                inWpt = true;
-                                lat = Double.parseDouble(xsr.getAttributeValue("", "lat"));
-                                lon = Double.parseDouble(xsr.getAttributeValue("", "lon"));
-                                waypoint = new Waypoint(lat, lon);
-                                if (inRte || inTrkseg) {
-                                    path.addWaypoint(waypoint);
+                        ln = xsr.getLocalName();
+                        if (ln.equals("gpx")) {
+                        } else if (ln.equals("metadata")) {
+                            inMetadata = true;
+                        } else if (ln.equals("rte")) {
+                            inRte = true;
+                            route = addRoute();
+                            path = route.getPath();
+                        } else if (ln.equals("trk")) {
+                            inTrk = true;
+                            track = new Track(this.color);
+                            this.tracks.add(track);
+                        } else if (ln.equals("trkseg")) {
+                            inTrkseg = true;
+                            path = track.addTrackseg();
+                        } else if (ln.equals("wpt") || ln.equals("rtept") || ln.equals("trkpt")) {
+                            inWpt = true;
+                            lat = Double.parseDouble(xsr.getAttributeValue("", "lat"));
+                            lon = Double.parseDouble(xsr.getAttributeValue("", "lon"));
+                            waypoint = new Waypoint(lat, lon);
+                            if (inRte || inTrkseg) {
+                                path.addWaypoint(waypoint);
+                            } else if (inWpt) {
+                                this.waypointGroup.addWaypoint(waypoint);
+                            }
+                        } else if (ln.equals("name")) {
+                            xsr.next();
+                            if (xsr.isCharacters()) {
+                                String name = xsr.getText();
+                                if (inMetadata && !name.equals("")) {
+                                    this.name = name;
+                                } else if (inRte) {
+                                    route.setName(name);
+                                } else if (inTrk) {
+                                    track.setName(name);
                                 } else if (inWpt) {
-                                    this.waypointGroup.addWaypoint(waypoint);
+                                    waypoint.setName(name);
                                 }
-                                break;
-                            case "name":
-                                xsr.next();
-                                if (xsr.isCharacters()) {
-                                    String name = xsr.getText();
-                                    if (inMetadata && !name.equals("")) {
-                                        this.name = name;
-                                    } else if (inRte) {
-                                        route.setName(name);
-                                    } else if (inTrk) {
-                                        track.setName(name);
-                                    } else if (inWpt) {
-                                        waypoint.setName(name);
-                                    }
+                            }
+                        } else if (ln.equals("desc")) {
+                            xsr.next();
+                            if (xsr.isCharacters()) {
+                                String desc = xsr.getText();
+                                if (inMetadata) {
+                                    this.desc = desc;
+                                } else if (inRte) {
+                                    route.setDesc(desc);
+                                } else if (inTrk) {
+                                    track.setDesc(desc);
+                                } else if (inWpt) {
+                                    waypoint.setDesc(desc);
                                 }
-                                break;
-                            case "desc":
-                                xsr.next();
-                                if (xsr.isCharacters()) {
-                                    String desc = xsr.getText();
-                                    if (inMetadata) {
-                                        this.desc = desc;
-                                    } else if (inRte) {
-                                        route.setDesc(desc);
-                                    } else if (inTrk) {
-                                        track.setDesc(desc);
-                                    } else if (inWpt) {
-                                        waypoint.setDesc(desc);
-                                    }
+                            }
+                        } else if (ln.equals("number")) {
+                            xsr.next();
+                            if (xsr.isCharacters()) {
+                                String number = xsr.getText();
+                                int numberInt = Integer.parseInt(number);
+                                if (inRte) {
+                                    route.setNumber(numberInt);
+                                } else if (inTrk) {
+                                    track.setNumber(numberInt);
                                 }
-                                break;
-                            case "number":
-                                xsr.next();
-                                if (xsr.isCharacters()) {
-                                    String number = xsr.getText();
-                                    int numberInt = Integer.parseInt(number);
-                                    if (inRte) {
-                                        route.setNumber(numberInt);
-                                    } else if (inTrk) {
-                                        track.setNumber(numberInt);
-                                    }
+                            }
+                        } else if (ln.equals("type")) {
+                            xsr.next();
+                            if (xsr.isCharacters()) {
+                                String type = xsr.getText();
+                                if (inRte) {
+                                    route.setType(type);
+                                } else if (inTrk) {
+                                    track.setType(type);
+                                } else if (inWpt) {
+                                    waypoint.setType(type);
                                 }
-                                break;
-                            case "type":
-                                xsr.next();
-                                if (xsr.isCharacters()) {
-                                    String type = xsr.getText();
-                                    if (inRte) {
-                                        route.setType(type);
-                                    } else if (inTrk) {
-                                        track.setType(type);
-                                    } else if (inWpt) {
-                                        waypoint.setType(type);
-                                    }
+                            }
+                        } else if (ln.equals("ele")) {
+                            xsr.next();
+                            if (xsr.isCharacters() && inWpt) {
+                                waypoint.setEle(Double.parseDouble(xsr.getText()));
+                            }
+                        } else if (ln.equals("time")) {
+                            xsr.next();
+                            if (xsr.isCharacters()) {
+                                String time = xsr.getText();
+                                Calendar cal = DatatypeConverter.parseDateTime(time);
+                                Date date = cal.getTime();
+                                if (inWpt) {
+                                    waypoint.setTime(date);
+                                } else if (inMetadata) {
+                                    this.time = date;
                                 }
-                                break;
-                            case "ele":
-                                xsr.next();
-                                if (xsr.isCharacters() && inWpt) {
-                                    waypoint.setEle(Double.parseDouble(xsr.getText()));
-                                }
-                                break;
-                            case "time":
-                                xsr.next();
-                                if (xsr.isCharacters()) {
-                                    String time = xsr.getText();
-                                    Calendar cal = DatatypeConverter.parseDateTime(time);
-                                    Date date = cal.getTime();
-                                    if (inWpt) {
-                                        waypoint.setTime(date);
-                                    } else if (inMetadata) {
-                                        this.time = date;
-                                    }
-                                }
-                                break;
+                            }
                         }
                         break;
                     case XMLStreamReader.END_ELEMENT:
-                        switch (xsr.getLocalName()) {
-                            case "metadata":
-                                inMetadata = false;
-                                break;
-                            case "rte":
-                                inRte = false;
-                                break;
-                            case "trk":
-                                inTrk = false;
-                                break;
-                            case "trkseg":
-                                inTrkseg = false;
-                                break;
-                            case "wpt":
-                            case "rtept":
-                            case "trkpt":
-                                inWpt = false;
-                                break;
+                        ln = xsr.getLocalName();
+                        if (ln.equals("metadata")) {
+                            inMetadata = false;
+                        } else if (ln.equals("rte")) {
+                            inRte = false;
+                        } else if (ln.equals("trk")) {
+                            inTrk = false;
+                        } else if (ln.equals("trkseg")) {
+                            inTrkseg = false;
+                        } else if (ln.equals("wpt") || ln.equals("rtept") || ln.equals("trkpt")) {
+                            inWpt = false;
                         }
                         break;
                 }
@@ -562,7 +542,7 @@ public class GPXFile extends GPXObject {
         try {
             validator.validate(xmlFile);
             return true;
-        } catch (SAXException | IOException e) {
+        } catch (Exception e) {
             System.err.println(xmlFile.getSystemId() + " is not valid.");
             System.err.println("Validation error: " + e.getLocalizedMessage() + "\n");
             return false;

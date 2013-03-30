@@ -36,7 +36,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -1177,7 +1176,7 @@ public class GPXCreator extends JComponent {
                                 EleCorrectedStatus corrected = null;
                                 try {
                                     corrected = get();
-                                } catch (InterruptedException | ExecutionException e) {
+                                } catch (Exception e) {
                                     e.printStackTrace();
                                 } finally {
                                     if (corrected == EleCorrectedStatus.FAILED) {
@@ -1276,22 +1275,16 @@ public class GPXCreator extends JComponent {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String selected = (String) comboBoxTileSource.getSelectedItem();
-                switch (selected) {
-                    case "OpenStreetMap":
-                        mapPanel.setTileSource(openStreetMap);
-                        break;
-                    case "OpenCycleMap":
-                        mapPanel.setTileSource(openCycleMap);
-                        break;
-                    case "Bing Aerial":
-                        mapPanel.setTileSource(bingAerial);
-                        break;
-                    case "MapQuest-OSM":
-                        mapPanel.setTileSource(mapQuestOsm);
-                        break;
-                    case "MapQuest Open Aerial":
-                        mapPanel.setTileSource(mapQuestOpenAerial);
-                        break;
+                if (selected.equals("OpenStreetMap")) {
+                    mapPanel.setTileSource(openStreetMap);
+                } else if (selected.equals("OpenCycleMap")) {
+                    mapPanel.setTileSource(openCycleMap);
+                } else if (selected.equals("Bing Aerial")) {
+                    mapPanel.setTileSource(bingAerial);
+                } else if (selected.equals("MapQuest-OSM")) {
+                    mapPanel.setTileSource(mapQuestOsm);
+                } else if (selected.equals("MapQuest Open Aerial")) {
+                    mapPanel.setTileSource(mapQuestOpenAerial);
                 }
             }
         });
@@ -1333,25 +1326,18 @@ public class GPXCreator extends JComponent {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String selected = (String) comboBoxTileSource.getSelectedItem();
-                switch (selected) {
-                    case "Google Maps":
-                        mapPanel.setTileSource(googleMaps);
-                        break;
-                    case "Google Satellite":
-                        mapPanel.setTileSource(googleSat);
-                        break;
-                    case "Google Satellite + Labels":
-                        mapPanel.setTileSource(googleSatMap);
-                        break;
-                    case "Google Terrain":
-                        mapPanel.setTileSource(googleTerrain);
-                        break;
-                    case "Esri Topo USA":
-                        mapPanel.setTileSource(esriTopoUSA);
-                        break;
-                    case "Esri Topo World":
-                        mapPanel.setTileSource(esriTopoWorld);
-                        break;
+                if (selected.equals("Google Maps")) {
+                    mapPanel.setTileSource(googleMaps);
+                } else if (selected.equals("Google Satellite")) {
+                    mapPanel.setTileSource(googleSat);
+                } else if (selected.equals("Google Satellite + Labels")) {
+                    mapPanel.setTileSource(googleSatMap);
+                } else if (selected.equals("Google Terrain")) {
+                    mapPanel.setTileSource(googleTerrain);
+                } else if (selected.equals("Esri Topo USA")) {
+                    mapPanel.setTileSource(esriTopoUSA);
+                } else if (selected.equals("Esri Topo World")) {
+                    mapPanel.setTileSource(esriTopoWorld);
                 }
             }
         });*/
