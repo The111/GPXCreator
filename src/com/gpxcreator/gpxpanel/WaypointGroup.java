@@ -302,7 +302,7 @@ public class WaypointGroup extends GPXObject {
         InputStream is = new ByteArrayInputStream(xmlResponse.getBytes());
         XMLInputFactory xif = XMLInputFactory.newInstance();
         try {
-            XMLStreamReader xsr = xif.createXMLStreamReader(is);
+            XMLStreamReader xsr = xif.createXMLStreamReader(is, "ISO-8859-1");
             while (xsr.hasNext()) {
                 xsr.next();
                 if (xsr.getEventType() == XMLStreamReader.START_ELEMENT) {

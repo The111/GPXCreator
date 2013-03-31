@@ -100,7 +100,7 @@ public class GPXFile extends GPXObject {
         }
         XMLInputFactory xif = XMLInputFactory.newInstance();
         try {
-            XMLStreamReader xsr = xif.createXMLStreamReader(fis);
+            XMLStreamReader xsr = xif.createXMLStreamReader(fis, "ISO-8859-1");
             while (xsr.hasNext()) {
                 xsr.next();
                 String ln;
@@ -123,8 +123,8 @@ public class GPXFile extends GPXObject {
                             path = track.addTrackseg();
                         } else if (ln.equals("wpt") || ln.equals("rtept") || ln.equals("trkpt")) {
                             inWpt = true;
-                            lat = Double.parseDouble(xsr.getAttributeValue("", "lat"));
-                            lon = Double.parseDouble(xsr.getAttributeValue("", "lon"));
+                            lat = Double.parseDouble(xsr.getAttributeValue(null, "lat"));
+                            lon = Double.parseDouble(xsr.getAttributeValue(null, "lon"));
                             waypoint = new Waypoint(lat, lon);
                             if (inRte || inTrkseg) {
                                 path.addWaypoint(waypoint);

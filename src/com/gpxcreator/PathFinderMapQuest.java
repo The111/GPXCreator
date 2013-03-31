@@ -63,7 +63,7 @@ public class PathFinderMapQuest implements PathFinder {
         double lat = 0;
         double lon = 0;
         try {
-            XMLStreamReader xsr = xif.createXMLStreamReader(is);
+            XMLStreamReader xsr = xif.createXMLStreamReader(is, "ISO-8859-1");
             while (xsr.hasNext()) {
                 xsr.next();
                 if (xsr.getEventType() == XMLStreamReader.START_ELEMENT && xsr.getLocalName().equals("shapePoints")) {
