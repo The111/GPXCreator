@@ -148,7 +148,7 @@ public class GPXCreator extends JComponent {
                         private DefaultMutableTreeNode currSelection;
                         private DefaultMutableTreeNode prevSelection;
                 private JPanel containerLeftSidebarBottom;    // BOTTOM
-                    private JPanel containerProperties;
+                    private JPanel containerPropertiesHeading;
                         private JLabel labelPropertiesHeading;
                     private JScrollPane scrollPaneProperties;
                         private DefaultTableModel tableModelProperties;
@@ -456,6 +456,19 @@ public class GPXCreator extends JComponent {
         splitPaneMain.setLeftComponent(splitPaneSidebar);
         splitPaneSidebar.setDividerLocation(210);
         
+        splitPaneSidebar.addPropertyChangeListener(new PropertyChangeListener() {
+            @Override
+            public void propertyChange(PropertyChangeEvent evt) {
+                // must be scheduled with invokeLater, or if user moves divider fast enough, the update won't happen 
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        updatePropTableWidths();
+                    }
+                });
+            }
+        });
+        
         /* LEFT SIDEBAR TOP CONTAINER
          * --------------------------------------------------------------------------------------------------------- */
         containerLeftSidebarTop = new JPanel();
@@ -476,7 +489,7 @@ public class GPXCreator extends JComponent {
         containerExplorerHeading.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
         containerExplorerHeading.setLayout(new BoxLayout(containerExplorerHeading, BoxLayout.Y_AXIS));
         containerExplorerHeading.setBorder(new CompoundBorder(
-                new MatteBorder(0, 1, 0, 1, (Color) new Color(0, 0, 0)), new EmptyBorder(2, 5, 5, 5)));
+                new MatteBorder(1, 1, 0, 1, (Color) new Color(0, 0, 0)), new EmptyBorder(2, 5, 5, 5)));
         containerLeftSidebarTop.add(containerExplorerHeading);
         
         /* EXPLORER HEADING
@@ -575,17 +588,17 @@ public class GPXCreator extends JComponent {
         
         /* PROPERTIES CONTAINER
          * --------------------------------------------------------------------------------------------------------- */
-        containerProperties = new JPanel();
-        containerProperties.setMaximumSize(new Dimension(32767, 23));
-        containerProperties.setMinimumSize(new Dimension(10, 23));
-        containerProperties.setPreferredSize(new Dimension(10, 23));
-        containerProperties.setAlignmentY(Component.TOP_ALIGNMENT);
-        containerProperties.setAlignmentX(Component.LEFT_ALIGNMENT);
-        containerProperties.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-        containerProperties.setLayout(new BoxLayout(containerProperties, BoxLayout.Y_AXIS));
-        containerProperties.setBorder(new CompoundBorder(
-                new MatteBorder(0, 1, 0, 1, (Color) new Color(0, 0, 0)), new EmptyBorder(2, 5, 5, 5)));
-        containerLeftSidebarBottom.add(containerProperties);
+        containerPropertiesHeading = new JPanel();
+        containerPropertiesHeading.setMaximumSize(new Dimension(32767, 23));
+        containerPropertiesHeading.setMinimumSize(new Dimension(10, 23));
+        containerPropertiesHeading.setPreferredSize(new Dimension(10, 23));
+        containerPropertiesHeading.setAlignmentY(Component.TOP_ALIGNMENT);
+        containerPropertiesHeading.setAlignmentX(Component.LEFT_ALIGNMENT);
+        containerPropertiesHeading.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+        containerPropertiesHeading.setLayout(new BoxLayout(containerPropertiesHeading, BoxLayout.Y_AXIS));
+        containerPropertiesHeading.setBorder(new CompoundBorder(
+                new MatteBorder(1, 1, 0, 1, (Color) new Color(0, 0, 0)), new EmptyBorder(2, 5, 5, 5)));
+        containerLeftSidebarBottom.add(containerPropertiesHeading);
         sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z");
         
         /* PROPERTIES HEADING
@@ -596,7 +609,7 @@ public class GPXCreator extends JComponent {
         labelPropertiesHeading.setHorizontalAlignment(SwingConstants.LEFT);
         labelPropertiesHeading.setFont(new Font("Segoe UI", Font.BOLD, 12));
         labelPropertiesHeading.setAlignmentY(0.0f);
-        containerProperties.add(labelPropertiesHeading);
+        containerPropertiesHeading.add(labelPropertiesHeading);
         
         /* PROPERTIES TABLE/MODEL
          * --------------------------------------------------------------------------------------------------------- */
