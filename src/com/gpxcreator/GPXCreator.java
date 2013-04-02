@@ -99,7 +99,7 @@ import com.gpxcreator.gpxpanel.Waypoint;
 import com.gpxcreator.gpxpanel.WaypointGroup;
 import com.gpxcreator.gpxpanel.WaypointGroup.EleCorrectedStatus;
 import com.gpxcreator.gpxpanel.WaypointGroup.WptGrpType;
-import com.gpxcreator.tree.GPXTreeEditor;
+import com.gpxcreator.tree.GPXTree;
 import com.gpxcreator.tree.GPXTreeRenderer;
 
 @SuppressWarnings("serial")
@@ -146,7 +146,7 @@ public class GPXCreator extends JComponent {
                         private DefaultTreeModel treeModel;
                         private JTree tree;
                         private DefaultMutableTreeNode currSelection;
-                        private DefaultMutableTreeNode prevSelection;
+                        // private DefaultMutableTreeNode prevSelection;
                 private JPanel containerLeftSidebarBottom;    // BOTTOM
                     private JPanel containerPropertiesHeading;
                         private JLabel labelPropertiesHeading;
@@ -506,15 +506,15 @@ public class GPXCreator extends JComponent {
          * --------------------------------------------------------------------------------------------------------- */
         root = new DefaultMutableTreeNode("GPX Files");
         treeModel = new DefaultTreeModel(root);
-        tree = new JTree(treeModel);
-        tree.setEditable(true);
+        tree = new GPXTree(treeModel);
+        tree.setEditable(false);
         tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
         tree.setRootVisible(false);
         tree.setShowsRootHandles(true);
         tree.setCellRenderer(new GPXTreeRenderer());
-        tree.setCellEditor(new GPXTreeEditor());
         tree.putClientProperty("JTree.lineStyle", "None");
         tree.setBackground(Color.white);
+        tree.setToggleClickCount(0);
         
         ImageIcon collapsed = new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/tree-collapsed.png"));
         ImageIcon expanded = new ImageIcon(GPXCreator.class.getResource("/com/gpxcreator/icons/tree-expanded.png"));
@@ -546,11 +546,11 @@ public class GPXCreator extends JComponent {
                 }
                 
                 // necessary hack if bold selection style used in GPXTreeComponentFactory (keeps label sizes correct)                
-                treeModel.nodeChanged(currSelection);
+                /*treeModel.nodeChanged(currSelection);
                 if (prevSelection != null) {
                     treeModel.nodeChanged(prevSelection);
                 }
-                prevSelection = currSelection;
+                prevSelection = currSelection;*/
                 
                 updateButtonVisibility();
             }
