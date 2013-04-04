@@ -446,6 +446,34 @@ public class GPXCreator extends JComponent {
         pathFindType = PathFindType.FOOT;
         // pathfinding options panel (end)
         
+        // up and down keys will also zoom the map in and out
+        String zoomIn = "zoom in";
+        mapPanel.getInputMap(JComponent.WHEN_FOCUSED).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), zoomIn);
+        mapPanel.getActionMap().put(zoomIn, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mapPanel.zoomIn();
+            }
+        });
+        
+        String zoomOut = "zoom out";
+        mapPanel.getInputMap(JComponent.WHEN_FOCUSED).put(
+                KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), zoomOut);
+        mapPanel.getActionMap().put(zoomOut, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mapPanel.zoomOut();
+            }
+        });
+        
+        mapPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                mapPanel.requestFocus();
+            }
+        });
+        
         /* SIDEBAR SPLIT PANE
         /* --------------------------------------------------------------------------------------------------------- */
         splitPaneSidebar = new JSplitPane();
