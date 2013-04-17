@@ -6,6 +6,13 @@ import java.util.List;
 
 import com.gpxcreator.gpxpanel.WaypointGroup.WptGrpType;
 
+/**
+ * 
+ * The GPX "trk" element.
+ * 
+ * @author Matt Hoover
+ *
+ */
 public class Track extends GPXObject {
 
     protected int number;
@@ -13,6 +20,11 @@ public class Track extends GPXObject {
     
     private List<WaypointGroup> tracksegs;
     
+    /**
+     * Constructs a {@link Track} with the chosen color.
+     * 
+     * @param color     The color.
+     */
     public Track(Color color) {
         super(color);
         this.type = "";
@@ -60,6 +72,9 @@ public class Track extends GPXObject {
         return trackseg;
     }
 
+    /* (non-Javadoc)
+     * @see com.gpxcreator.gpxpanel.GPXObject#updateAllProperties()
+     */
     @Override
     public void updateAllProperties() {
         maxSpeedKmph = 0;

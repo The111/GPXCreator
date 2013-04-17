@@ -20,20 +20,40 @@ import javax.xml.stream.XMLStreamReader;
 
 import org.openstreetmap.gui.jmapviewer.OsmMercator;
 
+/**
+ * 
+ * An ad-hoc element representing a group of waypoint elements.<br />
+ * In a group of top-level "wpt" elements, these points will be represented discretely.<br />
+ * In a "rte" or "trk" element, these points will be represented as paths.
+ * 
+ * @author Matt Hoover
+ *
+ */
 public class WaypointGroup extends GPXObject {
 
+    /**
+     * The different types of {@link WaypointGroup}.
+     */
     public enum WptGrpType {
         WAYPOINTS,
         ROUTE,
         TRACKSEG
     }
     
+    /**
+     * Status messages returned to the calling class after an elevation correction request.<br />
+     * A "correction" is an attempt to replace all elevation data with SRTM data from the server.
+     */
     public enum EleCorrectedStatus {
         CORRECTED,
         FAILED,
         CORRECTED_WITH_CLEANSE
     }
     
+    /**
+     * Status messages returned to the calling class after an elevation cleanse request.<br />
+     * A "cleanse" is an attempt to fill in any data that was missing from the server's response (SRTM voids).
+     */
     public enum EleCleansedStatus {
         CLEANSED,
         CANNOT_CLEANSE,
@@ -43,6 +63,12 @@ public class WaypointGroup extends GPXObject {
     private WptGrpType wptGrpType;
     private List<Waypoint> waypoints;
     
+    /**
+     * Default constructor.
+     * 
+     * @param color     The color.
+     * @param type      The type of {@link WaypointGroup}.
+     */
     public WaypointGroup(Color color, WptGrpType type) {
         super(color);
         switch (type) {
@@ -72,10 +98,17 @@ public class WaypointGroup extends GPXObject {
         this.waypoints = waypoints;
     }
 
+    /**
+     * Adds a waypoint to the group.
+     */
     public void addWaypoint(Waypoint wpt) {
         waypoints.add(wpt);
     }
     
+    /**
+     * Adds a waypoint to the group and optionally corrects the elevation.<br />
+     * Warning: using this method for repetitive adding of points will generate a large number of HTTP requests.
+     */
     public void addWaypoint(Waypoint wpt, boolean correctElevation) {
         if (correctElevation) {
             String url = "http://open.mapquestapi.com/elevation/v1/profile?key=Fmjtd%7Cluub2lu12u%2Ca2%3Do5-96y5qz&";
@@ -116,6 +149,9 @@ public class WaypointGroup extends GPXObject {
         addWaypoint(wpt);
     }
 
+    /**
+     * Removes a waypoint from the group.
+     */
     public void removeWaypoint(Waypoint wpt) {
         waypoints.remove(wpt);
         updateBounds();
@@ -141,8 +177,15 @@ public class WaypointGroup extends GPXObject {
         }
     }
 
-    // returns false if the query fails for any reason
-    // POST KVP (remember: had problems with POST XML and useFilter parameter)
+    /**
+     * Corrects the elevation of each {@link Waypoint} in the group and updates the aggregate group properties.<br />
+     * Optionally can do a "cleanse," attempting to fill missing data (SRTM voids) in the response.<br />
+     * Note: The MapQuest Open Elevation API has a bug with POST XML, and the useFilter parameter.
+     *       Because of this, the request must be a POST KVP (key/value pair).  The useFilter parameter returns
+     *       data of much higher quality. 
+     * 
+     * @return  The status of the response.
+     */
     public EleCorrectedStatus correctElevation(boolean doCleanse) {
         if (waypoints.size() < 1) {
             return EleCorrectedStatus.FAILED;
@@ -219,6 +262,11 @@ public class WaypointGroup extends GPXObject {
         }
     }
 
+    /**
+     * Cleanese the elevation data.  Any {@link Waypoint} with an elevation of -32768 needs to be interpolated.
+     * 
+     * @return  The status of the cleanse.
+     */
     public EleCleansedStatus cleanseEleData() {
         boolean cleansed = false;
         double eleStart = getStart().getEle();
@@ -297,6 +345,11 @@ public class WaypointGroup extends GPXObject {
         }
     }
 
+    /**
+     * Parses an XML response string.
+     * 
+     * @return  A list of numerical elevation values.
+     */
     public static List<Double> getEleArrayFromXMLResponse(String xmlResponse) {
         List<Double> ret = new ArrayList<Double>();
         InputStream is = new ByteArrayInputStream(xmlResponse.getBytes());
@@ -322,6 +375,9 @@ public class WaypointGroup extends GPXObject {
         return ret;
     }
 
+    /* (non-Javadoc)
+     * @see com.gpxcreator.gpxpanel.GPXObject#updateAllProperties()
+     */
     @Override
     public void updateAllProperties() {
         if (waypoints.size() > 0) {

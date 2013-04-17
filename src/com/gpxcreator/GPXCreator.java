@@ -102,6 +102,14 @@ import com.gpxcreator.gpxpanel.WaypointGroup.WptGrpType;
 import com.gpxcreator.tree.GPXTree;
 import com.gpxcreator.tree.GPXTreeRenderer;
 
+/**
+ * 
+ * The main application class for GPX Creator, a GUI for manipulating GPX files.<br />
+ * More info at www.gpxcreator.com.
+ * 
+ * @author hooverm
+ *
+ */
 @SuppressWarnings("serial")
 public class GPXCreator extends JComponent {
     
@@ -1558,6 +1566,9 @@ public class GPXCreator extends JComponent {
         systemProperties.setProperty("http.proxyPort", "80");*/
     }
     
+    /**
+     * Creates a new GPX file and loads it into the application.
+     */
     public void fileNew() {
         if (fileIOHappening) {
             return;
@@ -1582,6 +1593,9 @@ public class GPXCreator extends JComponent {
         }
     }
     
+    /**
+     * Loads a GPX file into the application.
+     */
     public void fileOpen() {
         if (fileIOHappening) {
             return;
@@ -1649,6 +1663,9 @@ public class GPXCreator extends JComponent {
         }
     }
     
+    /**
+     * Saves the active {@link GPXFile} to disk.
+     */
     public void fileSave() {
         if (fileIOHappening) {
             return;
@@ -1707,6 +1724,9 @@ public class GPXCreator extends JComponent {
         }
     }
     
+    /**
+     * Removes the active {@link GPXObject} from its parent container.
+     */
     public void deleteActiveGPXObject() {
         if (fileIOHappening) {
             return;
@@ -1761,6 +1781,9 @@ public class GPXCreator extends JComponent {
         updatePropsTable();
     }
     
+    /**
+     * Updates the data displayed in the properties table.
+     */
     public void updatePropsTable() {
         tableModelProperties.setRowCount(0);
         
@@ -1835,6 +1858,9 @@ public class GPXCreator extends JComponent {
         updatePropTableWidths();
     }
     
+    /**
+     * Displays details for a {@link Route} in the properties table.
+     */
     public void propsDisplayRoute(Route rte) {
         if (!rte.getName().equals("")) {
             tableModelProperties.addRow(new Object[]{"route name", rte.getName()});
@@ -1852,6 +1878,9 @@ public class GPXCreator extends JComponent {
         propsDisplayPathDetails(rtepts);
     }
     
+    /**
+     * Displays details for a track segment in the properties table.
+     */
     public void propsDisplayTrackseg(Track trk, WaypointGroup trkpts) {
         if (!trk.getName().equals("")) {
             tableModelProperties.addRow(new Object[]{"track name", trk.getName()});
@@ -1868,6 +1897,9 @@ public class GPXCreator extends JComponent {
         propsDisplayPathDetails(trkpts);
     }
     
+    /**
+     * Displays details common to all path types ({@link WptGrpType#ROUTE} and {@link WptGrpType#TRACKSEG}). 
+     */
     public void propsDisplayPathDetails(WaypointGroup path) {
         tableModelProperties.addRow(new Object[]{"# of pts", path.getNumPts()});
         if (path.getStart() != null && path.getEnd() != null) {
@@ -1946,6 +1978,9 @@ public class GPXCreator extends JComponent {
         }
     }
     
+    /**
+     * Dynamically adjusts the widths of the columns in the properties table for optimal display.
+     */
     public void updatePropTableWidths() {
         int nameWidth = 0;
         for (int row = 0; row < tableProperties.getRowCount(); row++) {
@@ -1981,12 +2016,17 @@ public class GPXCreator extends JComponent {
         tableProperties.getColumn("Value").setPreferredWidth(valueWidth);
     }
     
+    /**
+     * Clears the properties table.
+     */
     public void clearPropsTable() {
         tableModelProperties.setRowCount(0);
     }
     
-    // common function used by multiple mouse listeners
-    // the "active" waypoint is the one highlighted on mouseover/mousenear in point delete/split modes
+    /**
+     * Common function used by multiple mouse listeners.  An "active waypoint" is one that is moused over
+     * as a candidate for an action (for example, deletion or usage as a splitting point). 
+     */
     public void updateActiveWpt(MouseEvent e) {
         if (tglDelPoints.isSelected() || tglSplitTrackseg.isSelected()) {
             updateActiveWptGrp();
@@ -2032,6 +2072,9 @@ public class GPXCreator extends JComponent {
         }        
     }
     
+    /**
+     * Determines which {@link GPXObject}s are active and sets the appropriate variables.
+     */
     public void updateActiveWptGrp() {
         activeWptGrp = null;
         activeTracksegNode = null;
@@ -2068,6 +2111,10 @@ public class GPXCreator extends JComponent {
         }
     }
 
+    /**
+     * Registers a list of {@link JToggleButton}s and deselects them all, optionally leaving one selected.
+     * Used to prevent multiple toggles from being selected simultaneously.
+     */
     public void deselectAllToggles(JToggleButton exceptThisOne) {
         List<JToggleButton> toggles = new ArrayList<JToggleButton>();
         toggles.add(tglAddPoints);
@@ -2083,7 +2130,10 @@ public class GPXCreator extends JComponent {
         }
     }
     
-    // dynamically enable/disable certain toolbar buttons
+    /**
+     * Dynamically enables/disables certain toolbar buttons dependent on which type of {@link GPXObject} is active
+     * and what operations are allowed on that type of element.
+     */
     public void updateButtonVisibility() {
         btnFileNew.setEnabled(true);
         btnFileOpen.setEnabled(true);            
@@ -2134,6 +2184,9 @@ public class GPXCreator extends JComponent {
         }
     }
     
+    /**
+     * Builds the selected chart type and displays the new window frame.
+     */
     public void buildChart(String chartName, String iconPath) {
         if (activeGPXObject != null) {
             updateActiveWptGrp();
@@ -2166,6 +2219,9 @@ public class GPXCreator extends JComponent {
         }
     }
     
+    /**
+     * Displays the edit properties dialog and saves the user-selected values to the active {@link GPXObject}. 
+     */
     public void editProperties() {
         EditPropsDialog dlg = new EditPropsDialog(frame, "Edit properties", activeGPXObject);
         dlg.setVisible(true);
@@ -2195,6 +2251,9 @@ public class GPXCreator extends JComponent {
         updatePropsTable();
     }
     
+    /**
+     * Sets a flag to synchronize I/O operations with {@link GPXFile}s.  Must be called before and after each I/O.
+     */
     public void setFileIOHappening(boolean happening) {
         fileIOHappening = happening;
         updateButtonVisibility();

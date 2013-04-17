@@ -20,11 +20,25 @@ import org.openstreetmap.gui.jmapviewer.OsmMercator;
 import com.gpxcreator.gpxpanel.Waypoint;
 import com.gpxcreator.gpxpanel.WaypointGroup;
 
+/**
+ * 
+ * A chart for displaying a GPX element's speed profile.
+ * 
+ * @author Matt Hoover
+ *
+ */
 @SuppressWarnings("serial")
 public class SpeedChart extends JFrame {
     
     private double maxRawSpeedMph;
 
+    /**
+     * Constructs the {@link SpeedChart} window.
+     * 
+     * @param title             The chart window title.
+     * @param headingPrefix     The heading for the graphics on the chart.
+     * @param wptGrp            The GPX element being plotted.
+     */
     public SpeedChart(String title, String headingPrefix, WaypointGroup wptGrp) {
         super(title);
         maxRawSpeedMph = 0;
@@ -40,6 +54,9 @@ public class SpeedChart extends JFrame {
         setContentPane(chartpanel);
     }
 
+    /**
+     * Creates the dataset to be used on the chart.
+     */
     private XYDataset createDataset(WaypointGroup wptGrp) {
         XYSeries xyseries = new XYSeries(wptGrp.getName());
         double lengthMeters = 0;
@@ -67,6 +84,9 @@ public class SpeedChart extends JFrame {
         return xyseriescollection;
     }
     
+    /**
+     * Creates the chart to be used in the window frame.
+     */
     private JFreeChart createChart(XYDataset xydataset, WaypointGroup wptGrp, String headingPrefix) {
         JFreeChart jfreechart = null;
         jfreechart = ChartFactory.createXYLineChart(

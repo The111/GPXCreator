@@ -2,6 +2,13 @@ package com.gpxcreator.gpxpanel;
 
 import java.util.Date;
 
+/**
+ * 
+ * The GPX "wpt" element.
+ * 
+ * @author Matt Hoover
+ *
+ */
 public class Waypoint {
 
     private double lat;
@@ -12,6 +19,12 @@ public class Waypoint {
     protected String desc;
     protected String type;
     
+    /**
+     * Constructs a {@link Waypoint}.
+     * 
+     * @param lat   Latitude.
+     * @param lon   Longitude.
+     */
     public Waypoint(double lat, double lon) {
         this.lat = lat;
         this.lon = lon;

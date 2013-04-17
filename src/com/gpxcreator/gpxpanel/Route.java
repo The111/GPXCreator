@@ -4,6 +4,13 @@ import java.awt.Color;
 
 import com.gpxcreator.gpxpanel.WaypointGroup.WptGrpType;
 
+/**
+ * 
+ * The GPX "rte" element.
+ * 
+ * @author Matt Hoover
+ *
+ */
 public class Route extends GPXObject {
 
     protected int number;
@@ -11,6 +18,11 @@ public class Route extends GPXObject {
     
     private WaypointGroup path;
     
+    /**
+     * Constructs a {@link Route} with the chosen color.
+     * 
+     * @param color     The color.
+     */
     public Route(Color color) {
         super(color);
         this.type = "";
@@ -50,6 +62,9 @@ public class Route extends GPXObject {
         return path;
     }
 
+    /* (non-Javadoc)
+     * @see com.gpxcreator.gpxpanel.GPXObject#updateAllProperties()
+     */
     @Override
     public void updateAllProperties() {
         path.updateAllProperties();

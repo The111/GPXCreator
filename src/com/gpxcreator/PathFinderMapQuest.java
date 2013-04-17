@@ -16,7 +16,17 @@ import javax.xml.stream.XMLStreamReader;
 
 import com.gpxcreator.gpxpanel.Waypoint;
 
+/**
+ * 
+ * Pathfinder that uses the MapQuest Open Directions API.
+ * 
+ * @author Matt Hoover
+ *
+ */
 public class PathFinderMapQuest implements PathFinder {
+    /* (non-Javadoc)
+     * @see com.gpxcreator.PathFinder#getXMLResponse(com.gpxcreator.PathFinder.PathFindType, double, double, double, double)
+     */
     @Override
     public String getXMLResponse(PathFindType type, double lat1, double lon1, double lat2, double lon2) {
         String typeParam = "";
@@ -53,6 +63,9 @@ public class PathFinderMapQuest implements PathFinder {
         return builder.toString();
     }
 
+    /* (non-Javadoc)
+     * @see com.gpxcreator.PathFinder#parseXML(java.lang.String)
+     */
     @Override
     public List<Waypoint> parseXML(String xml) {
         List<Waypoint> ret = new ArrayList<Waypoint>();

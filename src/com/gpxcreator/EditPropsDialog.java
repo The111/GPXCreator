@@ -37,6 +37,13 @@ import com.gpxcreator.gpxpanel.GPXObject;
 import com.gpxcreator.gpxpanel.Route;
 import com.gpxcreator.gpxpanel.Track;
 
+/**
+ * 
+ * A dialog enabling the user to update GPX metadata.
+ * 
+ * @author Matt Hoover
+ *
+ */
 @SuppressWarnings("serial")
 public class EditPropsDialog extends JDialog {
 
@@ -52,6 +59,13 @@ public class EditPropsDialog extends JDialog {
     private JTextField inputGPXType;
     private JTextField inputNumber;
 
+    /**
+     * Constructs the {@link EditPropsDialog}.
+     * 
+     * @param frame     The parent container for the dialog.
+     * @param title     The dialog's title.
+     * @param gpxObject The GPX element being edited.
+     */
     public EditPropsDialog(Frame frame, String title, GPXObject gpxObject) {
         super(frame, title, true);
         setForeground(Color.BLACK);
@@ -317,6 +331,9 @@ public class EditPropsDialog extends JDialog {
         return number;
     }
 
+    /**
+     * Do this if the user clicks ok.
+     */
     private void okButton() {
         name = inputName.getText();
         desc = inputDesc.getText();
@@ -327,6 +344,9 @@ public class EditPropsDialog extends JDialog {
         setVisible(false);
     }
 
+    /**
+     * Do this if the user clicks cancel.
+     */
     private void cancelButton() {
         name = null;
         desc = null;

@@ -33,6 +33,13 @@ import org.xml.sax.SAXException;
 import com.gpxcreator.GPXCreator;
 import com.gpxcreator.gpxpanel.WaypointGroup.WptGrpType;
 
+/**
+ * 
+ * Top level GPX file element.  Contains all other GPX element types.
+ * 
+ * @author Matt Hoover
+ *
+ */
 public class GPXFile extends GPXObject {
     
     private String link;
@@ -49,7 +56,7 @@ public class GPXFile extends GPXObject {
     private boolean inWpt;
     
     /**
-     * Creates an empty {@link #GPXFile}.
+     * Creates an empty {@link GPXFile}.
      */
     public GPXFile() {
         super(true);
@@ -65,10 +72,9 @@ public class GPXFile extends GPXObject {
     }
     
     /**
-     * Creates an empty {@link #GPXFile}.
+     * Creates an empty {@link GPXFile}.
      * 
-     * @param name
-     *            The name of the route. 
+     * @param name      The name of the route. 
      */
     public GPXFile(String name) {
         this();
@@ -78,10 +84,9 @@ public class GPXFile extends GPXObject {
     }
     
     /**
-     * Creates a {@link #GPXFile} from a GPX file.
+     * Creates a {@link GPXFile} from a GPX file.
      * 
-     * @param gpx
-     *            The GPX file.
+     * @param gpx       The GPX file.
      */
     public GPXFile(File gpx) {
         this();
@@ -239,10 +244,9 @@ public class GPXFile extends GPXObject {
     }
 
     /**
-     * Saves the {@link #Route} to a GPX file.
+     * Saves the file to disk in GPX format.
      * 
-     * @param gpx
-     *            The GPX file.
+     * @param gpx   The GPX file.
      */
     public void saveToGPXFile(File gpx) {
         // ensure file has correct extension
@@ -527,6 +531,9 @@ public class GPXFile extends GPXObject {
         }
     }
     
+    /**
+     * Validates a {@link GPXFile} against the GPX 1.1 spec.
+     */
     public static boolean validateGPXFile(File gpx) {
         URL schemaFile = GPXCreator.class.getResource("/com/gpxcreator/schema/gpx-1.1.xsd");
         Source xmlFile = new StreamSource(gpx);
@@ -595,6 +602,9 @@ public class GPXFile extends GPXObject {
         return tracks;
     }
     
+    /* (non-Javadoc)
+     * @see com.gpxcreator.gpxpanel.GPXObject#updateAllProperties()
+     */
     @Override
     public void updateAllProperties() {
         if (waypointGroup.getWaypoints().size() > 1) {

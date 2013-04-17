@@ -28,6 +28,13 @@ import org.openstreetmap.gui.jmapviewer.tilesources.OsmTileSource;
 
 import com.gpxcreator.GPXCreator;
 
+/**
+ * 
+ * An extension of {@link JMapViewer} to include the display of GPX elements and related functionality.
+ * 
+ * @author Matt Hoover
+ *
+ */
 @SuppressWarnings("serial")
 public class GPXPanel extends JMapViewer {
     
@@ -42,6 +49,9 @@ public class GPXPanel extends JMapViewer {
     private Point shownPoint;
     private Color activeColor;
 
+    /**
+     * Constructs a new {@link GPXPanel} instance.
+     */
     public GPXPanel() {
         super(new MemoryTileCache(), 16);
         this.setTileSource(new OsmTileSource.Mapnik());
@@ -87,11 +97,17 @@ public class GPXPanel extends JMapViewer {
         }
     }
     
+    /**
+     * Adds the chosen {@link GPXFile} to the panel.
+     */
     public void addGPXFile(GPXFile gpxFile) {
         gpxFiles.add(gpxFile);
         repaint();
     }
     
+    /**
+     * Removes the chosen {@link GPXFile} to the panel.
+     */
     public void removeGPXFile(GPXFile gpxFile) {
         gpxFiles.remove(gpxFile);
         repaint();
@@ -152,6 +168,9 @@ public class GPXPanel extends JMapViewer {
         }
     }
     
+    /**
+     * Paints each file.
+     */
     private void paintFiles(Graphics2D g2d, List<GPXFile> files) {
         for (GPXFile file: files) {
             if (file.isVisible()) {
@@ -202,6 +221,9 @@ public class GPXPanel extends JMapViewer {
         }
     }
     
+    /**
+     * Paints a single path contained in a {@link WaypointGroup}.
+     */
     private void paintPath(Graphics2D g2d, WaypointGroup waypointPath) {
         Point maxXY = getMapPosition(waypointPath.getMinLat(), waypointPath.getMaxLon(), false);
         Point minXY = getMapPosition(waypointPath.getMaxLat(), waypointPath.getMinLon(), false);
@@ -265,6 +287,9 @@ public class GPXPanel extends JMapViewer {
         }
     }
     
+    /**
+     * Paints the waypoints in {@link WaypointGroup}.
+     */
     private void paintWaypointGroup(Graphics2D g2d, WaypointGroup wptGrp) {
         if (wptGrp.isVisible() && wptGrp.isWptsVisible()) {
             List<Waypoint> wpts = wptGrp.getWaypoints();
@@ -275,6 +300,9 @@ public class GPXPanel extends JMapViewer {
         }
     }
     
+    /**
+     * Paints the start/end markers of a {@link Route} or {@link Track}.
+     */
     private void paintStartAndEnd(Graphics2D g2d, WaypointGroup waypointPath) {
         if (waypointPath.getNumPts() >= 2) {
             Waypoint rteptEnd = waypointPath.getEnd(); 
@@ -290,6 +318,9 @@ public class GPXPanel extends JMapViewer {
         }
     }
 
+    /**
+     * Centers the {@link GPXObject} and sets zoom for best fit to panel.
+     */
     public void fitGPXObjectToPanel(GPXObject gpxObject) {
         int maxZoom = tileController.getTileSource().getMaxZoom();
         int xMin = OsmMercator.LonToX(gpxObject.getMinLon(), maxZoom);

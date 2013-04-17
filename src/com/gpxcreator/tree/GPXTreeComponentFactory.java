@@ -20,6 +20,13 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import com.gpxcreator.GPXCreator;
 import com.gpxcreator.gpxpanel.GPXObject;
 
+/**
+ * 
+ * A factory class to create {@link GPXTreeComponent}s.
+ * 
+ * @author hooverm
+ *
+ */
 public class GPXTreeComponentFactory {
     
     private static ImageIcon visible;
@@ -30,6 +37,9 @@ public class GPXTreeComponentFactory {
     private static final Font PLAIN = new Font("Tahoma", Font.PLAIN, 11);
     private static boolean boldSelectionStyle = false;
     
+    /**
+     * Default constructor for the factory.
+     */
     public GPXTreeComponentFactory() {
         try {
             visible = new ImageIcon(ImageIO.read(GPXCreator.class.getResourceAsStream(
@@ -45,6 +55,10 @@ public class GPXTreeComponentFactory {
         }
     }
 
+    
+    /**
+     * Creates a new {@link GPXTreeComponent}.
+     */
     public GPXTreeComponent getComponent(JTree tree, Object value,
             boolean selected, boolean expanded, boolean leaf,
             int row, boolean hasFocus) {
@@ -105,6 +119,9 @@ public class GPXTreeComponentFactory {
         return comp;
     }
     
+    /**
+     * A square color icon for display in a {@link GPXTreeComponent}.
+     */
     public class GPXColorIcon implements Icon {
         private Color color;
         private static final int SIZE = 7;

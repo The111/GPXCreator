@@ -4,7 +4,17 @@ import java.awt.Color;
 
 import com.gpxcreator.gpxpanel.WaypointGroup.WptGrpType;
 
+/**
+ * 
+ * Contains fields and methods common to all GPX element types (files, routes, tracks, waypoints, etc). 
+ * 
+ * @author Matt Hoover
+ *
+ */
 public abstract class GPXObject {
+    /**
+     * Updates the relevant properties of the subclass.
+     */
     public abstract void updateAllProperties();
     
     protected String name;
@@ -44,6 +54,9 @@ public abstract class GPXObject {
     protected long riseTime;
     protected long fallTime;
     
+    /**
+     * Default superclass constructor.
+     */
     public GPXObject() {
         this.name = "";
         this.desc = "";        
@@ -57,6 +70,11 @@ public abstract class GPXObject {
         this.maxLon = -180;
     }
     
+    /**
+     * Constructs a GPX object with a random color.
+     * 
+     * @param randomColor   If true, use a random color.  If false, use white.
+     */
     public GPXObject(boolean randomColor) {
         this();
         if (randomColor) {
@@ -64,6 +82,11 @@ public abstract class GPXObject {
         }
     }
     
+    /**
+     * Constructs a GPX object with a chosen color.
+     * 
+     * @param color     The color.
+     */
     public GPXObject(Color color) {
         this();
         this.color = color;

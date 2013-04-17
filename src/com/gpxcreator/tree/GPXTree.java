@@ -17,6 +17,13 @@ import javax.swing.tree.TreePath;
 import com.gpxcreator.GPXCreator;
 import com.gpxcreator.gpxpanel.GPXObject;
 
+/**
+ * 
+ * An extension of {@link JTree} customized for the display of GPX elements.
+ * 
+ * @author Matt Hoover
+ *
+ */
 @SuppressWarnings("serial")
 public class GPXTree extends JTree {
     
@@ -25,6 +32,11 @@ public class GPXTree extends JTree {
     private DefaultTreeModel treeModel;
     private JDialog dialog;
     
+    /**
+     * Default constructor.
+     * 
+     * @param treeModel     The data model.
+     */
     public GPXTree(final DefaultTreeModel treeModel) {
         super(treeModel);
         this.treeModel = treeModel;
@@ -48,6 +60,9 @@ public class GPXTree extends JTree {
         dialog.setIconImage(img);
     }
     
+    /**
+     * Extends mouse interactivity with the tree. 
+     */
     @Override
     protected void processMouseEvent(MouseEvent e) {
         int type = e.getID();
