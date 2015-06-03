@@ -198,7 +198,7 @@ public class WaypointGroup extends GPXObject {
             latLngCollection += "," + String.format("%.6f", rtept.getLat()) +
                                 "," + String.format("%.6f", rtept.getLon());
         }
-        String url = "http://open.mapquestapi.com/elevation/v1/profile";
+        String url = "http://open.mapquestapi.com/elevation/v1/profile?key=Fmjtd%7Cluub2lu12u%2Ca2%3Do5-96y5qz";
         String charset = "UTF-8";
         String param1 = "kvp"; // inFormat
         String param2 = latLngCollection;
@@ -211,8 +211,7 @@ public class WaypointGroup extends GPXObject {
         BufferedReader br = null;
         StringBuilder builder = new StringBuilder();
         try {
-            query = "key=Fmjtd%7Cluub2lu12u%2Ca2%3Do5-96y5qz" + 
-                    String.format("&inFormat=%s" + "&latLngCollection=%s" + "&outFormat=%s" + "&useFilter=%s",
+            query = String.format("inFormat=%s" + "&latLngCollection=%s" + "&outFormat=%s" + "&useFilter=%s",
                     URLEncoder.encode(param1, charset),
                     URLEncoder.encode(param2, charset),
                     URLEncoder.encode(param3, charset),
