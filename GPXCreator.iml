@@ -35,9 +35,9 @@
       </library>
     </orderEntry>
     <orderEntry type="module-library">
-      <library name="JMapViewer_2013-03-22.jar">
+      <library name="JMapViewer_2.10.jar">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/externals/JMapViewer_2013-03-22.jar!/" />
+          <root url="jar://$MODULE_DIR$/externals/JMapViewer_2.10.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
