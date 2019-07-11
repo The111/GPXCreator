@@ -302,7 +302,8 @@ public class WaypointGroup extends GPXObject {
         for (int j = i - 1; j >= 0; j--) {
           prev = curr;
           curr = waypoints.get(j);
-          distBefore += OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
+          distBefore +=
+              new OsmMercator().getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
           if (waypoints.get(j).getEle() != -32768) {
             neighborBefore = waypoints.get(j);
             break;
@@ -314,7 +315,8 @@ public class WaypointGroup extends GPXObject {
         for (int j = i + 1; j < waypoints.size(); j++) {
           prev = curr;
           curr = waypoints.get(j);
-          distAfter += OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
+          distAfter +=
+              new OsmMercator().getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
           if (waypoints.get(j).getEle() != -32768) {
             neighborAfter = waypoints.get(j);
             break;
@@ -389,17 +391,34 @@ public class WaypointGroup extends GPXObject {
 
   public void updateLength() {
     lengthMeters = 0;
+    lengthAscendMeters = 0;
+    lengthDescendMeters = 0;
+    double sumAscendMeters = 0;
+    double sumDescendMeters = 0;
     Waypoint curr = getStart();
     Waypoint prev;
     for (Waypoint rtept : waypoints) {
       prev = curr;
       curr = rtept;
-      double increment = OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
+      double increment =
+          new OsmMercator().getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
       if (!Double.isNaN(increment)) {
-        lengthMeters += OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
+        lengthMeters += increment;
+        double grade = Math.abs((curr.getEle() - prev.getEle()) / increment);
+        if (curr.getEle() > prev.getEle()) {
+          lengthAscendMeters += increment;
+          sumAscendMeters += curr.getEle() - prev.getEle();
+        } else {
+          lengthDescendMeters += increment;
+          sumDescendMeters += prev.getEle() - curr.getEle();
+        }
       }
     }
     lengthMiles = lengthMeters * 0.000621371;
+    lengthAscendMiles = lengthAscendMeters * 0.000621371;
+    lengthDescendMiles = lengthDescendMeters * 0.000621371;
+    avgGradeAscend = sumAscendMeters / lengthAscendMeters;
+    avgGradeDescend = sumDescendMeters / lengthDescendMeters;
   }
 
   public void updateMaxSpeed() {
@@ -422,7 +441,7 @@ public class WaypointGroup extends GPXObject {
       for (int j = 0; j < smoothingFactor; j++) {
         Waypoint w1 = waypoints.get(i - j);
         Waypoint w2 = waypoints.get(i - j - 1);
-        lengthKm += OsmMercator.getDistance(w1.getLat(), w1.getLon(), w2.getLat(), w2.getLon()) / 1000;
+        lengthKm += new OsmMercator().getDistance(w1.getLat(), w1.getLon(), w2.getLat(), w2.getLon()) / 1000;
       }
 
       Date startTime = getEnd().getTime();

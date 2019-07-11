@@ -58,7 +58,8 @@ public class ElevationChart extends JFrame {
     for (Waypoint wpt : wptGrp.getWaypoints()) {
       prev = curr;
       curr = wpt;
-      double increment = OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
+      double increment =
+          new OsmMercator().getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
       if (!Double.isNaN(increment)) {
         lengthMeters += increment;
         lengthMiles = lengthMeters * 0.000621371;

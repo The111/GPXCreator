@@ -60,7 +60,8 @@ public class SpeedChart extends JFrame {
     for (Waypoint wpt : wptGrp.getWaypoints()) {
       prev = curr;
       curr = wpt;
-      double incrementMeters = OsmMercator.getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
+      double incrementMeters =
+          new OsmMercator().getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
       double incrementMillis = curr.getTime().getTime() - prev.getTime().getTime();
       double incrementHours = incrementMillis / 3600000D;
       if (!Double.isNaN(incrementMeters) && !Double.isNaN(incrementMillis) && incrementHours > 0) {

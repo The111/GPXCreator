@@ -6,13 +6,13 @@ import com.gpxcreator.gpxpanel.WaypointGroup.EleCorrectedStatus;
 import com.gpxcreator.gpxpanel.WaypointGroup.WptGrpType;
 import com.gpxcreator.tree.GPXTree;
 import com.gpxcreator.tree.GPXTreeRenderer;
-import org.openstreetmap.gui.jmapviewer.OsmFileCacheTileLoader;
 import org.openstreetmap.gui.jmapviewer.OsmMercator;
+import org.openstreetmap.gui.jmapviewer.OsmTileLoader;
 import org.openstreetmap.gui.jmapviewer.interfaces.TileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.BingAerialTileSource;
-import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOpenAerialTileSource;
-import org.openstreetmap.gui.jmapviewer.tilesources.MapQuestOsmTileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.OsmTileSource;
+import org.openstreetmap.gui.jmapviewer.tilesources.TemplatedTMSTileSource;
+import org.openstreetmap.gui.jmapviewer.tilesources.TileSourceInfo;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -45,7 +45,7 @@ import java.util.*;
  */
 @SuppressWarnings("serial")
 public class GPXCreator extends JComponent {
-    
+
     // indents show layout hierarchy
     private JFrame frame;
     private JPanel glassPane;
@@ -213,7 +213,7 @@ public class GPXCreator extends JComponent {
     mapPanel.setLayout(new BoxLayout(mapPanel, BoxLayout.X_AXIS));
     mapPanel.setAlignmentY(Component.TOP_ALIGNMENT);
     mapPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-    mapPanel.setDisplayPositionByLatLon(36, -98, 4); // U! S! A!
+    mapPanel.setDisplayPosition(1000, 1600, 4); // U! S! A!
     mapPanel.setZoomContolsVisible(false);
     try {
       mapPanel.setTileLoader(new OsmTileLoader(mapPanel));
@@ -806,8 +806,9 @@ public class GPXCreator extends JComponent {
           Point mapCenter = mapPanel.getCenter();
           int xStart = mapCenter.x - mapPanel.getWidth() / 2;
           int yStart = mapCenter.y - mapPanel.getHeight() / 2;
-          final double lat = OsmMercator.YToLat(yStart + y, zoom);
-          final double lon = OsmMercator.XToLon(xStart + x, zoom);
+          OsmMercator osmMercator = new OsmMercator();
+          final double lat = osmMercator.yToLat(yStart + y, zoom);
+          final double lon = osmMercator.xToLon(xStart + x, zoom);
 
           Route route = null;
           DefaultMutableTreeNode gpxFileNode = null;
@@ -931,8 +932,9 @@ public class GPXCreator extends JComponent {
           Point mapCenter = mapPanel.getCenter();
           int xStart = mapCenter.x - mapPanel.getWidth() / 2;
           int yStart = mapCenter.y - mapPanel.getHeight() / 2;
-          double lat = OsmMercator.YToLat(yStart + y, zoom);
-          double lon = OsmMercator.XToLon(xStart + x, zoom);
+          OsmMercator osmMercator = new OsmMercator();
+          double lat = osmMercator.yToLat(yStart + y, zoom);
+          double lon = osmMercator.xToLon(xStart + x, zoom);
           Waypoint wpt = new Waypoint(lat, lon);
 
           if (activeGPXObject.isGPXFileWithOneRoute()) {
@@ -1452,7 +1454,7 @@ public class GPXCreator extends JComponent {
             mapPanel.setCrosshairLat(latDouble);
             mapPanel.setCrosshairLon(lonDouble);
             Point p = new Point(mapPanel.getWidth() / 2, mapPanel.getHeight() / 2);
-            mapPanel.setDisplayPositionByLatLon(p, latDouble, lonDouble, mapPanel.getZoom());
+            mapPanel.setDisplayPosition(p, (int) latDouble, (int) lonDouble, mapPanel.getZoom());
           } catch (Exception e1) {
             // nothing
           }
@@ -1475,8 +1477,9 @@ public class GPXCreator extends JComponent {
           Point mapCenter = mapPanel.getCenter();
           int xStart = mapCenter.x - mapPanel.getWidth() / 2;
           int yStart = mapCenter.y - mapPanel.getHeight() / 2;
-          double lat = OsmMercator.YToLat(yStart + y, zoom);
-          double lon = OsmMercator.XToLon(xStart + x, zoom);
+          OsmMercator osmMercator = new OsmMercator();
+          double lat = osmMercator.yToLat(yStart + y, zoom);
+          double lon = osmMercator.xToLon(xStart + x, zoom);
           textFieldLat.setText(String.format("%.6f", lat));
           textFieldLon.setText(String.format("%.6f", lon));
           mapPanel.setShowCrosshair(true);
@@ -1508,7 +1511,7 @@ public class GPXCreator extends JComponent {
         debug.setFocusable(false);
         toolBarMain.addSeparator();
         toolBarMain.add(debug);*/
-        
+
         /*java.util.Properties systemProperties = System.getProperties();
         systemProperties.setProperty("http.proxyHost", "proxy1.lmco.com");
         systemProperties.setProperty("http.proxyPort", "80");*/
@@ -1898,6 +1901,8 @@ public class GPXCreator extends JComponent {
       tableModelProperties.addRow(new Object[]{"duration", hours + "hr " + minutes + "min " + seconds + "sec"});
     }
     tableModelProperties.addRow(new Object[]{"length", String.format("%.2f mi", lengthMiles)});
+    tableModelProperties.addRow(new Object[]{"length ascend", String.format("%.2f mi", lengthAscendMiles)});
+    tableModelProperties.addRow(new Object[]{"length descend", String.format("%.2f mi", lengthDescendMiles)});
 
     double avgSpeedMph = (lengthMiles / duration) * 3600000;
     if (Double.isNaN(avgSpeedMph) || Double.isInfinite(avgSpeedMph)) {
@@ -1947,6 +1952,13 @@ public class GPXCreator extends JComponent {
     if (avgFallSpeedFph != 0) {
       tableModelProperties.addRow(new Object[]{"avg fall speed", String.format("%.0f ft/hr", avgFallSpeedFph)});
     }
+
+    tableModelProperties.addRow(
+        new Object[]{
+            "avg grade ascend", String.format("%.1f%s", grossRiseFeet / (lengthAscendMiles * 5280) * 100, "%")});
+    tableModelProperties.addRow(
+        new Object[]{
+            "avg grade descend", String.format("%.1f%s", grossFallFeet / (lengthDescendMiles * 5280) * 100, "%")});
   }
 
   /**
@@ -2070,9 +2082,9 @@ public class GPXCreator extends JComponent {
 
         DefaultMutableTreeNode trackNode = null;
         @SuppressWarnings("unchecked")
-        Enumeration<DefaultMutableTreeNode> children = currSelection.children();
+        Enumeration<TreeNode> children = currSelection.children();
         while (children.hasMoreElements()) {
-          trackNode = children.nextElement();
+          trackNode = (DefaultMutableTreeNode) children.nextElement();
           if (((GPXObject) trackNode.getUserObject()).isTrackseg()) {
             break;
           }

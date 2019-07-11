@@ -35,6 +35,12 @@ public abstract class GPXObject {
   protected long duration;
   protected double lengthMeters;
   protected double lengthMiles;
+  protected double lengthAscendMeters;
+  protected double lengthAscendMiles;
+  protected double lengthDescendMeters;
+  protected double lengthDescendMiles;
+  protected double avgGradeAscend;
+  protected double avgGradeDescend;
   protected double maxSpeedKmph;
   protected double maxSpeedMph;
   protected double eleStartMeters;
@@ -160,6 +166,30 @@ public abstract class GPXObject {
 
   public double getLengthMiles() {
     return lengthMiles;
+  }
+
+  public double getLengthAscendMeters() {
+    return lengthAscendMeters;
+  }
+
+  public double getLengthAscendMiles() {
+    return lengthAscendMiles;
+  }
+
+  public double getLengthDescendMeters() {
+    return lengthDescendMeters;
+  }
+
+  public double getLengthDescendMiles() {
+    return lengthDescendMiles;
+  }
+
+  public double getAvgGradeAscend() {
+    return avgGradeAscend;
+  }
+
+  public double getAvgGradeDescend() {
+    return avgGradeDescend;
   }
 
   public double getMaxSpeedKmph() {

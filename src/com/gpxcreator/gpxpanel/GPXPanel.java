@@ -306,10 +306,11 @@ public class GPXPanel extends JMapViewer {
    */
   public void fitGPXObjectToPanel(GPXObject gpxObject) {
     int maxZoom = tileController.getTileSource().getMaxZoom();
-    int xMin = OsmMercator.LonToX(gpxObject.getMinLon(), maxZoom);
-    int xMax = OsmMercator.LonToX(gpxObject.getMaxLon(), maxZoom);
-    int yMin = OsmMercator.LatToY(gpxObject.getMaxLat(), maxZoom); // screen y-axis positive is down
-    int yMax = OsmMercator.LatToY(gpxObject.getMinLat(), maxZoom); // screen y-axis positive is down
+    OsmMercator osmMercator = new OsmMercator();
+    int xMin = (int) osmMercator.lonToX(gpxObject.getMinLon(), maxZoom);
+    int xMax = (int) osmMercator.lonToX(gpxObject.getMaxLon(), maxZoom);
+    int yMin = (int) osmMercator.latToY(gpxObject.getMaxLat(), maxZoom); // screen y-axis positive is down
+    int yMax = (int) osmMercator.latToY(gpxObject.getMinLat(), maxZoom); // screen y-axis positive is down
 
     if (xMin > xMax || yMin > yMax) {
       //setDisplayPositionByLatLon(36, -98, 4); // U! S! A!
