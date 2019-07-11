@@ -34,10 +34,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Enumeration;
 import java.util.List;
+import java.util.*;
 
 /**
  * The main application class for GPX Creator, a GUI for manipulating GPX files.<br />
@@ -218,7 +216,7 @@ public class GPXCreator extends JComponent {
     mapPanel.setDisplayPositionByLatLon(36, -98, 4); // U! S! A!
     mapPanel.setZoomContolsVisible(false);
     try {
-      mapPanel.setTileLoader(new OsmFileCacheTileLoader(mapPanel));
+      mapPanel.setTileLoader(new OsmTileLoader(mapPanel));
     } catch (Exception e) {
       System.err.println("There was a problem constructing the tile cache on disk.");
       e.printStackTrace();
@@ -1252,19 +1250,21 @@ public class GPXCreator extends JComponent {
     toolBarMain.add(Box.createHorizontalGlue());
 
     final TileSource openStreetMap = new OsmTileSource.Mapnik();
-    final TileSource openCycleMap = new OsmTileSource.CycleMap();
+    // Needs an API key.
+    // final TileSource openCycleMap = new OsmTileSource.CycleMap();
     final TileSource bingAerial = new BingAerialTileSource();
-    final TileSource mapQuestOsm = new MapQuestOsmTileSource();
-    final TileSource mapQuestOpenAerial = new MapQuestOpenAerialTileSource();
+    // MapQuest sources seem to have been removed from OSM. :-(
+    // final TileSource mapQuestOsm = new MapQuestOsmTileSource();
+    // final TileSource mapQuestOpenAerial = new MapQuestOpenAerialTileSource();
 
     comboBoxTileSource = new JComboBox<String>();
     comboBoxTileSource.setMaximumRowCount(18);
 
     comboBoxTileSource.addItem("OpenStreetMap");
-    comboBoxTileSource.addItem("OpenCycleMap");
+    // comboBoxTileSource.addItem("OpenCycleMap");
     comboBoxTileSource.addItem("Bing Aerial");
-    comboBoxTileSource.addItem("MapQuest-OSM");
-    comboBoxTileSource.addItem("MapQuest Open Aerial");
+    // comboBoxTileSource.addItem("MapQuest-OSM");
+    // comboBoxTileSource.addItem("MapQuest Open Aerial");
 
     comboBoxTileSource.addActionListener(new ActionListener() {
       @Override
@@ -1272,14 +1272,14 @@ public class GPXCreator extends JComponent {
         String selected = (String) comboBoxTileSource.getSelectedItem();
         if (selected.equals("OpenStreetMap")) {
           mapPanel.setTileSource(openStreetMap);
-        } else if (selected.equals("OpenCycleMap")) {
-          mapPanel.setTileSource(openCycleMap);
+//                } else if (selected.equals("OpenCycleMap")) {
+//                    mapPanel.setTileSource(openCycleMap);
         } else if (selected.equals("Bing Aerial")) {
           mapPanel.setTileSource(bingAerial);
-        } else if (selected.equals("MapQuest-OSM")) {
-          mapPanel.setTileSource(mapQuestOsm);
-        } else if (selected.equals("MapQuest Open Aerial")) {
-          mapPanel.setTileSource(mapQuestOpenAerial);
+//                } else if (selected.equals("MapQuest-OSM")) {
+//                    mapPanel.setTileSource(mapQuestOsm);
+//                } else if (selected.equals("MapQuest Open Aerial")) {
+//                    mapPanel.setTileSource(mapQuestOpenAerial);
         }
       }
     });
@@ -1288,7 +1288,7 @@ public class GPXCreator extends JComponent {
     toolBarMain.add(comboBoxTileSource);
 
     // the tile sources below are not licensed for public usage
-        
+
         /*final TileSource googleMaps = new TemplatedTMSTileSource(
                 "Google Maps",
                 "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=m&x={x}&y={y}&z={zoom}", 22);
@@ -1316,7 +1316,7 @@ public class GPXCreator extends JComponent {
         comboBoxTileSource.addItem("Google Terrain");
         comboBoxTileSource.addItem("Esri Topo USA");
         comboBoxTileSource.addItem("Esri Topo World");
-        
+
         comboBoxTileSource.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -1755,12 +1755,20 @@ public class GPXCreator extends JComponent {
         propsDisplayRoute(rte);
       } else if (gpxFile.isGPXFileWithOneTracksegOnly()) { // display single track(seg) details
         Track trk = gpxFile.getTracks().get(0);
-        WaypointGroup trkpts = trk.getTracksegs().get(0);
-        propsDisplayTrackseg(trk, trkpts);
+        propsDisplayTrack(trk, trk.getTracksegs().get(0));
       } else { // display file top-level container info
-        tableModelProperties.addRow(new Object[]{"waypoints", gpxFile.getWaypointGroup().getNumPts()});
-        tableModelProperties.addRow(new Object[]{"routes", gpxFile.getRoutes().size()});
-        tableModelProperties.addRow(new Object[]{"tracks", gpxFile.getTracks().size()});
+        if (gpxFile.getWaypointGroup().getNumPts() > 0) {
+          tableModelProperties.addRow(new Object[]{"waypoints", gpxFile.getWaypointGroup().getNumPts()});
+        }
+        if (gpxFile.getRoutes().size() > 0) {
+          tableModelProperties.addRow(new Object[]{"routes", gpxFile.getRoutes().size()});
+        }
+        if (gpxFile.getTracks().size() > 0) {
+          tableModelProperties.addRow(new Object[]{"tracks", gpxFile.getTracks().size()});
+          if (gpxFile.getTracks().size() == 1) {
+            propsDisplayTrack(gpxFile.getTracks().get(0), null);
+          }
+        }
       }
 
     } else { // this is not a GPX file
@@ -1773,22 +1781,9 @@ public class GPXCreator extends JComponent {
       } else if (activeGPXObject.isTrack()) { // this is a track
         Track trk = (Track) activeGPXObject;
         if (trk.getTracksegs().size() == 1) { // display single trackseg details
-          WaypointGroup trkpts = trk.getTracksegs().get(0);
-          propsDisplayTrackseg(trk, trkpts);
+          propsDisplayTrack(trk, trk.getTracksegs().get(0));
         } else { // display track container info
-          if (!trk.getName().equals("")) {
-            tableModelProperties.addRow(new Object[]{"track name", trk.getName()});
-          }
-          if (!trk.getDesc().equals("")) {
-            tableModelProperties.addRow(new Object[]{"track desc", trk.getDesc()});
-          }
-          if (trk.getNumber() != 0) {
-            tableModelProperties.addRow(new Object[]{"track number", trk.getNumber()});
-          }
-          if (!trk.getType().equals("")) {
-            tableModelProperties.addRow(new Object[]{"track type", trk.getType()});
-          }
-          tableModelProperties.addRow(new Object[]{"segments", trk.getTracksegs().size()});
+          propsDisplayTrack(trk, null);
         }
       } else if (activeGPXObject.isWaypointGroup()) {
         WaypointGroup wptGrp = (WaypointGroup) activeGPXObject;
@@ -1801,7 +1796,7 @@ public class GPXCreator extends JComponent {
 
         } else if (wptGrp.getWptGrpType() == WptGrpType.TRACKSEG) { // this is a trackseg
           Track trk = (Track) parentObject;
-          propsDisplayTrackseg(trk, wptGrp);
+          propsDisplayTrack(trk, wptGrp);
         }
       }
     }
@@ -1824,14 +1819,13 @@ public class GPXCreator extends JComponent {
     if (!rte.getType().equals("")) {
       tableModelProperties.addRow(new Object[]{"route type", rte.getType()});
     }
-    WaypointGroup rtepts = rte.getPath();
-    propsDisplayPathDetails(rtepts);
+    propsDisplayPathDetails(Arrays.asList(rte.getPath()));
   }
 
   /**
    * Displays details for a track segment in the properties table.
    */
-  public void propsDisplayTrackseg(Track trk, WaypointGroup trkpts) {
+  public void propsDisplayTrack(Track trk, WaypointGroup maybeNullTrackseg) {
     if (!trk.getName().equals("")) {
       tableModelProperties.addRow(new Object[]{"track name", trk.getName()});
     }
@@ -1844,17 +1838,50 @@ public class GPXCreator extends JComponent {
     if (!trk.getType().equals("")) {
       tableModelProperties.addRow(new Object[]{"track type", trk.getType()});
     }
-    propsDisplayPathDetails(trkpts);
+    propsDisplayPathDetails(
+        maybeNullTrackseg == null ?
+            trk.getTracksegs() :
+            Arrays.asList(maybeNullTrackseg));
   }
 
   /**
    * Displays details common to all path types ({@link WptGrpType#ROUTE} and {@link WptGrpType#TRACKSEG}).
    */
-  public void propsDisplayPathDetails(WaypointGroup path) {
-    tableModelProperties.addRow(new Object[]{"# of pts", path.getNumPts()});
-    if (path.getStart() != null && path.getEnd() != null) {
-      Date startTimeDate = path.getStart().getTime();
-      Date endTimeDate = path.getEnd().getTime();
+  public void propsDisplayPathDetails(List<WaypointGroup> paths) {
+    int numPts = 0;
+    long duration = 0;
+    double lengthMiles = 0;
+    double lengthAscendMiles = 0;
+    double lengthDescendMiles = 0;
+    double maxSpeedMph = 0;
+    double eleMinFeet = Double.MAX_VALUE;
+    double eleMaxFeet = Double.MIN_VALUE;
+    double grossRiseFeet = 0;
+    double grossFallFeet = 0;
+    long riseTime = 0;
+    long fallTime = 0;
+    for (WaypointGroup path : paths) {
+      numPts += path.getNumPts();
+      duration += path.getDuration();
+      lengthMiles += path.getLengthMiles();
+      lengthAscendMiles += path.getLengthAscendMiles();
+      lengthDescendMiles += path.getLengthDescendMiles();
+      maxSpeedMph = Math.max(maxSpeedMph, path.getMaxSpeedMph());
+      eleMinFeet = Math.min(eleMinFeet, path.getEleMinFeet());
+      eleMaxFeet = Math.max(eleMaxFeet, path.getEleMaxFeet());
+      grossRiseFeet += path.getGrossRiseFeet();
+      grossFallFeet += path.getGrossFallFeet();
+      riseTime += path.getRiseTime();
+      fallTime += path.getFallTime();
+    }
+
+    tableModelProperties.addRow(new Object[]{"# of pts", numPts});
+
+    Waypoint start = paths.get(0).getStart();
+    Waypoint end = paths.get(paths.size() - 1).getEnd();
+    if (start != null && end != null) {
+      Date startTimeDate = start.getTime();
+      Date endTimeDate = end.getTime();
       if (startTimeDate != null && endTimeDate != null) {
         String startTimeString = "";
         String endTimeString = "";
@@ -1864,14 +1891,12 @@ public class GPXCreator extends JComponent {
         tableModelProperties.addRow(new Object[]{"end time", endTimeString});
       }
     }
-    long duration = path.getDuration();
     long hours = duration / 3600000;
     long minutes = (duration - hours * 3600000) / 60000;
     long seconds = (duration - hours * 3600000 - minutes * 60000) / 1000;
     if (duration != 0) {
       tableModelProperties.addRow(new Object[]{"duration", hours + "hr " + minutes + "min " + seconds + "sec"});
     }
-    double lengthMiles = path.getLengthMiles();
     tableModelProperties.addRow(new Object[]{"length", String.format("%.2f mi", lengthMiles)});
 
     double avgSpeedMph = (lengthMiles / duration) * 3600000;
@@ -1881,31 +1906,27 @@ public class GPXCreator extends JComponent {
     if (avgSpeedMph != 0) {
       tableModelProperties.addRow(new Object[]{"avg speed", String.format("%.1f mph", avgSpeedMph)});
     }
-    if (path.getMaxSpeedMph() != 0) {
-      tableModelProperties.addRow(new Object[]{"max speed", String.format("%.1f mph", path.getMaxSpeedMph())});
+    if (maxSpeedMph != 0) {
+      tableModelProperties.addRow(new Object[]{"max speed", String.format("%.1f mph", maxSpeedMph)});
     }
 
     tableModelProperties.addRow(
-        new Object[]{"elevation (start)", String.format("%.0f ft", path.getEleStartFeet())});
+        new Object[]{"elevation (start)", String.format("%.0f ft", paths.get(0).getEleStartFeet())});
     tableModelProperties.addRow(
-        new Object[]{"elevation (end)", String.format("%.0f ft", path.getEleEndFeet())});
+        new Object[]{"elevation (end)", String.format("%.0f ft", paths.get(paths.size() - 1).getEleEndFeet())});
     tableModelProperties.addRow(
-        new Object[]{"min elevation", String.format("%.0f ft", path.getEleMinFeet())});
+        new Object[]{"min elevation", String.format("%.0f ft", eleMinFeet)});
     tableModelProperties.addRow(
-        new Object[]{"max elevation", String.format("%.0f ft", path.getEleMaxFeet())});
-    double grossRiseFeet = path.getGrossRiseFeet();
-    double grossFallFeet = path.getGrossFallFeet();
+        new Object[]{"max elevation", String.format("%.0f ft", eleMaxFeet)});
     tableModelProperties.addRow(new Object[]{"gross rise", String.format("%.0f ft", grossRiseFeet)});
     tableModelProperties.addRow(new Object[]{"gross fall", String.format("%.0f ft", grossFallFeet)});
 
-    long riseTime = path.getRiseTime();
     hours = riseTime / 3600000;
     minutes = (riseTime - hours * 3600000) / 60000;
     seconds = (riseTime - hours * 3600000 - minutes * 60000) / 1000;
     if (riseTime != 0) {
       tableModelProperties.addRow(new Object[]{"rise time", hours + "hr " + minutes + "min " + seconds + "sec"});
     }
-    long fallTime = path.getFallTime();
     hours = fallTime / 3600000;
     minutes = (fallTime - hours * 3600000) / 60000;
     seconds = (fallTime - hours * 3600000 - minutes * 60000) / 1000;
