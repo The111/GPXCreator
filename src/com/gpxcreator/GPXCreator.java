@@ -11,8 +11,6 @@ import org.openstreetmap.gui.jmapviewer.OsmTileLoader;
 import org.openstreetmap.gui.jmapviewer.interfaces.TileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.BingAerialTileSource;
 import org.openstreetmap.gui.jmapviewer.tilesources.OsmTileSource;
-import org.openstreetmap.gui.jmapviewer.tilesources.TemplatedTMSTileSource;
-import org.openstreetmap.gui.jmapviewer.tilesources.TileSourceInfo;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -71,7 +69,7 @@ public class GPXCreator extends JComponent {
         private JButton btnCorrectEle;
         private JButton btnEleChart;
         private JButton btnSpeedChart;
-        private JComboBox<String> comboBoxTileSource;
+        protected JComboBox<String> comboBoxTileSource;
         private JLabel lblLat;
         private JTextField textFieldLat;
         private JLabel lblLon;
@@ -95,7 +93,7 @@ public class GPXCreator extends JComponent {
               private DefaultTableModel tableModelProperties;
               private JTable tableProperties;
               private SimpleDateFormat sdf;
-        private GPXPanel mapPanel;                               // RIGHT
+        protected GPXPanel mapPanel;                             // RIGHT
           private JPanel panelRoutingOptions;
           private JLabel lblMapQuestFoot;
           private JLabel lblMapQuestBike;
@@ -122,18 +120,10 @@ public class GPXCreator extends JComponent {
    * Launch the application.
    */
   public static void main(String[] args) {
-    try {
-      lookAndFeel = UIManager.getSystemLookAndFeelClassName();
-      UIManager.setLookAndFeel(lookAndFeel);
-    } catch (Throwable e) {
-      e.printStackTrace();
-    }
     EventQueue.invokeLater(new Runnable() {
       public void run() {
         try {
           GPXCreator window = new GPXCreator();
-          window.frame.setVisible(true);
-          window.frame.requestFocusInWindow();
         } catch (Exception e) {
           e.printStackTrace();
         }
@@ -151,7 +141,13 @@ public class GPXCreator extends JComponent {
   /**
    * Initialize the contents of the frame.
    */
-  private void initialize() {
+  protected void initialize() {
+    try {
+      lookAndFeel = UIManager.getSystemLookAndFeelClassName();
+      UIManager.setLookAndFeel(lookAndFeel);
+    } catch (Throwable e) {
+      e.printStackTrace();
+    }
 
     /* MAIN FRAME
      * --------------------------------------------------------------------------------------------------------- */
@@ -1288,57 +1284,6 @@ public class GPXCreator extends JComponent {
 
     comboBoxTileSource.setFocusable(false);
     toolBarMain.add(comboBoxTileSource);
-
-    // the tile sources below are not licensed for public usage
-
-        /*final TileSource googleMaps = new TemplatedTMSTileSource(
-                "Google Maps",
-                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=m&x={x}&y={y}&z={zoom}", 22);
-        final TileSource googleSat = new TemplatedTMSTileSource(
-                "Google Satellite",
-                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=s&x={x}&y={y}&z={zoom}", 21);
-        final TileSource googleSatMap = new TemplatedTMSTileSource(
-                "Google Satellite + Labels",
-                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=y&x={x}&y={y}&z={zoom}", 21);
-        final TileSource googleTerrain = new TemplatedTMSTileSource(
-                "Google Terrain",
-                "http://mt{switch:0,1,2,3}.google.com/vt/lyrs=p&x={x}&y={y}&z={zoom}", 15);
-        final TileSource esriTopoUSA = new TemplatedTMSTileSource(
-                "Esri Topo USA",
-                "http://server.arcgisonline.com/ArcGIS/rest/services/" +
-                "USA_Topo_Maps/MapServer/tile/{zoom}/{y}/{x}.jpg", 15);
-        final TileSource esriTopoWorld = new TemplatedTMSTileSource(
-                "Esri Topo World",
-                "http://server.arcgisonline.com/ArcGIS/rest/services/" +
-                "World_Topo_Map/MapServer/tile/{zoom}/{y}/{x}.jpg", 19);
-
-        comboBoxTileSource.addItem("Google Maps");
-        comboBoxTileSource.addItem("Google Satellite");
-        comboBoxTileSource.addItem("Google Satellite + Labels");
-        comboBoxTileSource.addItem("Google Terrain");
-        comboBoxTileSource.addItem("Esri Topo USA");
-        comboBoxTileSource.addItem("Esri Topo World");
-
-        comboBoxTileSource.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String selected = (String) comboBoxTileSource.getSelectedItem();
-                if (selected.equals("Google Maps")) {
-                    mapPanel.setTileSource(googleMaps);
-                } else if (selected.equals("Google Satellite")) {
-                    mapPanel.setTileSource(googleSat);
-                } else if (selected.equals("Google Satellite + Labels")) {
-                    mapPanel.setTileSource(googleSatMap);
-                } else if (selected.equals("Google Terrain")) {
-                    mapPanel.setTileSource(googleTerrain);
-                } else if (selected.equals("Esri Topo USA")) {
-                    mapPanel.setTileSource(esriTopoUSA);
-                } else if (selected.equals("Esri Topo World")) {
-                    mapPanel.setTileSource(esriTopoWorld);
-                }
-            }
-        });*/
-
     comboBoxTileSource.setMaximumSize(comboBoxTileSource.getPreferredSize());
 
     /* LAT/LON INPUT/SEEKER
@@ -1497,6 +1442,9 @@ public class GPXCreator extends JComponent {
     toolBarMain.add(horizontalGlue);
     toolBarMain.add(tglLatLonFocus);
 
+    frame.setVisible(true);
+    frame.requestFocusInWindow();
+
     /* DEBUG / PROXY
      * --------------------------------------------------------------------------------------------------------- */
 
@@ -1512,9 +1460,6 @@ public class GPXCreator extends JComponent {
         toolBarMain.addSeparator();
         toolBarMain.add(debug);*/
 
-        /*java.util.Properties systemProperties = System.getProperties();
-        systemProperties.setProperty("http.proxyHost", "proxy1.lmco.com");
-        systemProperties.setProperty("http.proxyPort", "80");*/
   }
 
   /**
