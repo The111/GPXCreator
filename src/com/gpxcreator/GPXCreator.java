@@ -1,3 +1,7 @@
+// TODO
+// 1) Replace YOURS with ORS?
+// 2) Find better way to omit lifts from MTB tracks
+
 package com.gpxcreator;
 
 import com.gpxcreator.PathFinder.PathFindType;
