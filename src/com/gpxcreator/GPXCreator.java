@@ -1271,7 +1271,12 @@ public class GPXCreator extends JComponent {
 
     final TileSource openStreetMap = new OsmTileSource.Mapnik();
     // Needs an API key.
-    // final TileSource openCycleMap = new OsmTileSource.CycleMap();
+    final TileSource openCycleMap = new OsmTileSource.CycleMap() {
+      @Override
+      protected String getApiKey() {
+        return "c21f339f5a3f48b295e31ea2ccf77434";
+      }
+    };
     final TileSource bingAerial = new BingAerialTileSource();
     // MapQuest sources seem to have been removed from OSM. :-(
     // final TileSource mapQuestOsm = new MapQuestOsmTileSource();
@@ -1281,7 +1286,7 @@ public class GPXCreator extends JComponent {
     comboBoxTileSource.setMaximumRowCount(18);
 
     comboBoxTileSource.addItem("OpenStreetMap");
-    // comboBoxTileSource.addItem("OpenCycleMap");
+    comboBoxTileSource.addItem("OpenCycleMap");
     comboBoxTileSource.addItem("Bing Aerial");
     // comboBoxTileSource.addItem("MapQuest-OSM");
     // comboBoxTileSource.addItem("MapQuest Open Aerial");
@@ -1292,8 +1297,8 @@ public class GPXCreator extends JComponent {
         String selected = (String) comboBoxTileSource.getSelectedItem();
         if (selected.equals("OpenStreetMap")) {
           mapPanel.setTileSource(openStreetMap);
-//                } else if (selected.equals("OpenCycleMap")) {
-//                    mapPanel.setTileSource(openCycleMap);
+        } else if (selected.equals("OpenCycleMap")) {
+            mapPanel.setTileSource(openCycleMap);
         } else if (selected.equals("Bing Aerial")) {
           mapPanel.setTileSource(bingAerial);
 //                } else if (selected.equals("MapQuest-OSM")) {
