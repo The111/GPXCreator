@@ -277,6 +277,11 @@ public abstract class GPXObject {
         && ((GPXFile) this).getTracks().get(0).getTracksegs().size() == 1);
   }
 
+  public boolean isGPXFileWithOneTrackOnly() {
+    return (isGPXFile() && ((GPXFile) this).getTracks().size() == 1
+        && ((GPXFile) this).getRoutes().size() == 0);
+  }
+
   public boolean isGPXFileWithOneTracksegOnly() {
     return (isGPXFile() && ((GPXFile) this).getTracks().size() == 1
         && ((GPXFile) this).getTracks().get(0).getTracksegs().size() == 1

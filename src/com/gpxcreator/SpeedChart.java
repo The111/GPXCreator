@@ -2,6 +2,7 @@ package com.gpxcreator;
 
 import com.gpxcreator.gpxpanel.Waypoint;
 import com.gpxcreator.gpxpanel.WaypointGroup;
+import org.apache.commons.math3.analysis.interpolation.LoessInterpolator;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -15,6 +16,8 @@ import org.openstreetmap.gui.jmapviewer.OsmMercator;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A chart for displaying a GPX element's speed profile.
@@ -57,6 +60,8 @@ public class SpeedChart extends JFrame {
     double lengthMiles = 0;
     Waypoint curr = wptGrp.getStart();
     Waypoint prev;
+    List<Double> distances = new ArrayList<>();
+    List<Double> speeds = new ArrayList<>();
     for (Waypoint wpt : wptGrp.getWaypoints()) {
       prev = curr;
       curr = wpt;
@@ -68,11 +73,28 @@ public class SpeedChart extends JFrame {
         lengthMeters += incrementMeters;
         lengthMiles = lengthMeters * 0.000621371;
         double incrementMiles = incrementMeters * 0.000621371;
-        Double speedMph = new Double(incrementMiles / incrementHours);
-        xyseries.add(new Double(lengthMiles), speedMph);
-        maxRawSpeedMph = Math.max(speedMph, maxRawSpeedMph);
+        distances.add(lengthMiles);
+        speeds.add(incrementMiles / incrementHours);
       }
     }
+
+    maxRawSpeedMph = Double.NEGATIVE_INFINITY;
+    for (double b = 0.01; b <= 0.5; b+=0.3) {
+      try {
+        double[] speedsSmoothed =
+            new LoessInterpolator(b /* 0.3 default */, 20 /* 2 default */).smooth(
+                distances.stream().mapToDouble(Double::doubleValue).toArray(),
+                speeds.stream().mapToDouble(Double::doubleValue).toArray());
+        for (int i = 0; i < speedsSmoothed.length; i++) {
+          xyseries.add(distances.get(i), new Double(speedsSmoothed[i]));
+          maxRawSpeedMph = Math.max(speedsSmoothed[i], maxRawSpeedMph);
+        }
+        System.out.println(b);
+        break;
+      } catch (Exception e) {
+      }
+    }
+
     XYSeriesCollection xyseriescollection = new XYSeriesCollection();
     xyseriescollection.addSeries(xyseries);
     xyseriescollection.setIntervalWidth(0.0D);

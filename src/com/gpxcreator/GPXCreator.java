@@ -110,6 +110,8 @@ public class GPXCreator extends JComponent {
     private Cursor mapCursor;
     private boolean mouseOverLink;
     private WaypointGroup activeWptGrp;
+    private Track activeTrack;
+    private DefaultMutableTreeNode activeTrackNode;
     private DefaultMutableTreeNode activeTracksegNode;
     private Waypoint activeWpt;
     private Color transparentYellow;
@@ -1032,7 +1034,9 @@ public class GPXCreator extends JComponent {
 
       @Override
       public void mouseClicked(MouseEvent e) {
-        if (activeWpt != null && activeWptGrp != null && !mouseOverLink) {
+        boolean isActiveWptGrp = activeWpt != null && activeWptGrp != null;
+        boolean isActiveWptGrpOrTrack = isActiveWptGrp || activeTrack != null;
+        if (isActiveWptGrpOrTrack && !mouseOverLink) {
           DefaultMutableTreeNode findFile = currSelection;
           while (!((GPXObject) findFile.getUserObject()).isGPXFile()) {
             findFile = (DefaultMutableTreeNode) findFile.getParent();
@@ -1040,10 +1044,25 @@ public class GPXCreator extends JComponent {
           GPXFile gpxFile = (GPXFile) findFile.getUserObject();
 
           if (tglDelPoints.isSelected()) {
+            if (!isActiveWptGrp) {
+              return;
+            }
             activeWptGrp.removeWaypoint(activeWpt);
             gpxFile.updateAllProperties();
           } else if (tglSplitTrackseg.isSelected()) {
-            WaypointGroup tracksegBeforeSplit = activeWptGrp;
+            WaypointGroup tracksegBeforeSplit = null;
+            if (activeWptGrp != null) {
+              tracksegBeforeSplit = activeWptGrp;
+            } else {
+              int i;
+              for (i = 0; i < activeTrack.getTracksegs().size(); i++) {
+                WaypointGroup trackseg = activeTrack.getTracksegs().get(i);
+                if (trackseg.contains(activeWpt)) {
+                  tracksegBeforeSplit = trackseg;
+                  activeTracksegNode = (DefaultMutableTreeNode) activeTrackNode.getChildAt(i);
+                }
+              }
+            }
 
             List<Waypoint> trackptsBeforeSplit = tracksegBeforeSplit.getWaypoints();
             int splitIndex = trackptsBeforeSplit.indexOf(activeWpt);
@@ -1067,23 +1086,26 @@ public class GPXCreator extends JComponent {
             Track track = (Track) trackObject;
             int insertIndex = track.getTracksegs().indexOf(tracksegBeforeSplit);
             track.getTracksegs().remove(tracksegBeforeSplit);
-            track.getTracksegs().add(insertIndex, tracksegAfterSplit2);
-            track.getTracksegs().add(insertIndex, tracksegAfterSplit1);
+            tracksegAfterSplit2.updateAllProperties();
+            tracksegAfterSplit1.updateAllProperties();
 
             treeModel.removeNodeFromParent(oldTracksegNode);
-            DefaultMutableTreeNode newTracksegNode2 = new DefaultMutableTreeNode(tracksegAfterSplit2);
-            DefaultMutableTreeNode newTracksegNode1 = new DefaultMutableTreeNode(tracksegAfterSplit1);
-            treeModel.insertNodeInto(newTracksegNode2, trackNode, insertIndex);
-            treeModel.insertNodeInto(newTracksegNode1, trackNode, insertIndex);
+            if (tracksegAfterSplit2.getLengthMiles() > 0.5) {
+              track.getTracksegs().add(insertIndex, tracksegAfterSplit2);
+              treeModel.insertNodeInto(new DefaultMutableTreeNode(tracksegAfterSplit2), trackNode, insertIndex);
+            }
+            if (tracksegAfterSplit1.getLengthMiles() > 0.5) {
+              track.getTracksegs().add(insertIndex, tracksegAfterSplit1);
+              treeModel.insertNodeInto(new DefaultMutableTreeNode(tracksegAfterSplit1), trackNode, insertIndex);
+            }
 
-            TreeNode[] pathForNewSelection = treeModel.getPathToRoot(newTracksegNode2);
-            tree.setSelectionPath(new TreePath(pathForNewSelection));
             gpxFile.updateAllProperties();
             tglSplitTrackseg.setSelected(true);
           }
 
           activeWptGrp = null;
           activeWpt = null;
+          activeTrack = null;
           mapPanel.setShownPoint(null);
           mapPanel.repaint();
           updatePropsTable();
@@ -1993,6 +2015,42 @@ public class GPXCreator extends JComponent {
           mapPanel.setShownPoint(null);
         }
         mapPanel.repaint();
+      } else if (activeTrack != null) {
+        mapPanel.setActiveColor(activeTrack.getColor());
+        Point p = e.getPoint();
+        boolean found = false;
+        double minDistance = Double.MAX_VALUE;
+
+        int start, end;
+        for (WaypointGroup trackseg : activeTrack.getTracksegs()) {
+          if (tglSplitTrackseg.isSelected()) { // don't allow splitting at endpoints
+            start = 1;
+            end = trackseg.getNumPts() - 1;
+          } else {
+            start = 0;
+            end = trackseg.getNumPts();
+          }
+          for (int i = start; i < end; i++) {
+            Waypoint wpt = trackseg.getWaypoints().get(i);
+            Point w = mapPanel.getMapPosition(wpt.getLat(), wpt.getLon(), false);
+            int dx = w.x - p.x;
+            int dy = w.y - p.y;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < 10 && distance < minDistance) {
+              minDistance = distance;
+              activeWpt = wpt;
+              mapPanel.setShownPoint(w);
+              found = true;
+            }
+          }
+        }
+
+        if (!found) {
+          activeWptGrp = null;
+          activeWpt = null;
+          mapPanel.setShownPoint(null);
+        }
+        mapPanel.repaint();
       } else {
         tglDelPoints.setSelected(false);
         tglSplitTrackseg.setSelected(false);
@@ -2005,6 +2063,7 @@ public class GPXCreator extends JComponent {
    */
   public void updateActiveWptGrp() {
     activeWptGrp = null;
+    activeTrack = null;
     activeTracksegNode = null;
     if (activeGPXObject.isWaypointGroup()) {
       activeWptGrp = (WaypointGroup) activeGPXObject;
@@ -2017,6 +2076,9 @@ public class GPXCreator extends JComponent {
       Track trk = (Track) activeGPXObject;
       activeWptGrp = trk.getTracksegs().get(0);
       activeTracksegNode = (DefaultMutableTreeNode) currSelection.getFirstChild();
+    } else if (activeGPXObject.isTrack()) {
+      activeTrack = (Track) activeGPXObject;
+      activeTrackNode = currSelection;
     } else if (activeGPXObject.isGPXFile()) {
       GPXFile gpxFile = (GPXFile) activeGPXObject;
       if (gpxFile.isGPXFileWithOneRouteOnly()) { // one route only
@@ -2035,6 +2097,16 @@ public class GPXCreator extends JComponent {
           }
         }
         activeTracksegNode = (DefaultMutableTreeNode) trackNode.getFirstChild();
+      } else if (gpxFile.isGPXFileWithOneTrackOnly()) {
+        activeTrack = gpxFile.getTracks().get(0);
+        @SuppressWarnings("unchecked")
+        Enumeration<TreeNode> children = currSelection.children();
+        while (children.hasMoreElements()) {
+          activeTrackNode = (DefaultMutableTreeNode) children.nextElement();
+          if (((GPXObject) activeTrackNode.getUserObject()).isTrack()) {
+            break;
+          }
+        }
       }
     }
   }
@@ -2090,10 +2162,12 @@ public class GPXCreator extends JComponent {
         btnCorrectEle.setEnabled(true);
         btnEleChart.setEnabled(true);
       }
-      if (o.isTrackseg() || o.isTrackWithOneSeg() || o.isGPXFileWithOneTracksegOnly()) {
+      if (o.isTrackseg() || o.isTrackWithOneSeg() || o.isGPXFileWithOneTracksegOnly()
+          || o.isTrack() || o.isGPXFileWithOneTrackOnly()) {
         tglSplitTrackseg.setEnabled(true);
       }
-      if (o.isTrackseg() || o.isTrackWithOneSeg() || o.isGPXFileWithOneTracksegOnly()) {
+      if (o.isTrackseg() || o.isTrackWithOneSeg() || o.isGPXFileWithOneTracksegOnly()
+          || o.isTrack() || o.isGPXFileWithOneTrackOnly()) {
         btnSpeedChart.setEnabled(true);
       }
       if (o.isGPXFile() || o.isRoute() || o.isTrack()) {

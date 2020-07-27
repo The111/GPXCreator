@@ -1,5 +1,6 @@
 package com.gpxcreator.gpxpanel;
 
+import org.apache.commons.math3.analysis.interpolation.LoessInterpolator;
 import org.openstreetmap.gui.jmapviewer.OsmMercator;
 
 import javax.xml.stream.XMLInputFactory;
@@ -150,6 +151,10 @@ public class WaypointGroup extends GPXObject {
 
   public int getNumPts() {
     return waypoints.size();
+  }
+
+  public boolean contains(Waypoint waypoint) {
+    return waypoints.contains(waypoint);
   }
 
   public Waypoint getStart() {
@@ -373,11 +378,47 @@ public class WaypointGroup extends GPXObject {
   @Override
   public void updateAllProperties() {
     if (waypoints.size() > 0) {
+      smoothElevation();
       updateDuration();
       updateLength();
       updateMaxSpeed();
       updateEleProps();
       updateBounds();
+    }
+  }
+
+  private void smoothElevation() {
+    double distance = 0;
+    List<Double> distances = new ArrayList<>();
+    List<Double> elevations = new ArrayList<>();
+
+    Waypoint curr = getStart();
+    Waypoint prev;
+    for (Waypoint rtept : waypoints) {
+      prev = curr;
+      curr = rtept;
+      double increment =
+          new OsmMercator().getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon());
+      if (!Double.isNaN(increment)) {
+        distance += increment;
+        distances.add(distance);
+        elevations.add(curr.getEle());
+      }
+    }
+
+    for (double b = 0.01; b <= 0.5; b+=0.3) {
+      try {
+        double[] elevationsSmoothed =
+            new LoessInterpolator(b /* 0.3 default */, 20 /* 2 default */).smooth(
+                distances.stream().mapToDouble(Double::doubleValue).toArray(),
+                elevations.stream().mapToDouble(Double::doubleValue).toArray());
+        for (int i = 1; i < waypoints.size(); i++) {
+          waypoints.get(i).setEle(elevationsSmoothed[i]);
+        }
+        System.out.println(b);
+        break;
+      } catch (Exception e) {
+      }
     }
   }
 
@@ -426,35 +467,48 @@ public class WaypointGroup extends GPXObject {
     double lengthKm;
     long millis;
     double hours;
-    // TODO replace this cheap smoothing method below with a Kalman filter?
-    int smoothingFactor = 5; // find max avg speed over this many segments to smooth unreliable data and outliers
-    if (getNumPts() <= smoothingFactor) {
-      return;
-    }
-    Waypoint segStart = getStart();
-    Waypoint segEnd = waypoints.get(smoothingFactor);
-    for (int i = smoothingFactor; i < getNumPts(); i++) {
-      segEnd = waypoints.get(i);
-      segStart = waypoints.get(i - smoothingFactor);
+    if (waypoints.size() < 2) return;
+    Waypoint prev = getStart();
+    Waypoint curr = waypoints.get(1);
+    List<Double> distances = new ArrayList<>();
+    List<Double> speeds = new ArrayList<>();
+    lengthKm = 0;
+    for (int i = 1; i < getNumPts(); i++) {
+      curr = waypoints.get(i);
+      prev = waypoints.get(i - 1);
 
-      lengthKm = 0;
-      for (int j = 0; j < smoothingFactor; j++) {
-        Waypoint w1 = waypoints.get(i - j);
-        Waypoint w2 = waypoints.get(i - j - 1);
-        lengthKm += new OsmMercator().getDistance(w1.getLat(), w1.getLon(), w2.getLat(), w2.getLon()) / 1000;
-      }
+      double increment =
+          new OsmMercator().getDistance(curr.getLat(), curr.getLon(), prev.getLat(), prev.getLon()) / 1000;
+      lengthKm += increment;
+      distances.add(lengthKm);
 
       Date startTime = getEnd().getTime();
       Date endTime = getEnd().getTime();
       if (startTime != null && endTime != null) {
-        millis = segEnd.getTime().getTime() - segStart.getTime().getTime();
+        millis = curr.getTime().getTime() - prev.getTime().getTime();
         hours = (double) millis / 3600000D;
         double candidateMax = lengthKm / hours;
         if (!Double.isNaN(candidateMax)) {
-          maxSpeedKmph = Math.max(maxSpeedKmph, lengthKm / hours);
+          speeds.add(increment / hours);
         }
       }
     }
+
+    for (double b = 0.01; b <= 0.5; b+=0.3) {
+      try {
+        double[] speedsSmoothed =
+            new LoessInterpolator(b /* 0.3 default */, 20 /* 2 default */).smooth(
+                distances.stream().mapToDouble(Double::doubleValue).toArray(),
+                speeds.stream().mapToDouble(Double::doubleValue).toArray());
+        for (int i = 0; i < speedsSmoothed.length; i++) {
+          maxSpeedKmph = Math.max(maxSpeedKmph, speedsSmoothed[i]);
+        }
+        System.out.println(b);
+        break;
+      } catch (Exception e) {
+      }
+    }
+
     maxSpeedMph = maxSpeedKmph * 0.621371;
   }
 
